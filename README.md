@@ -15,10 +15,6 @@ for those widgets based on the source data.
 5. Add layers of visualization, including tooltips and other visual aids, including connections between data points.
 6. Render the plot, either in the notebook or by saving to file, optionally appending an interactive legend.
 
-A Jupyter notebook demonstrating a lot of `GeoPlotter`'s functionality can be found here:
-
-https://nbviewer.jupyter.org/github/Valassis-Digital-Media/geoplotter/blob/master/geoplotter_demo_notebook.ipynb
-
 ## Supported data representations
 Data can be loaded in a variety of formats (geohashes, WKT, shapely objects, or coordinate pairs). The tool will 
 automatically detect the format and process it appropriately. Likewise, any input can be rendered as the original 
