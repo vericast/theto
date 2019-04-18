@@ -8,13 +8,13 @@ except:
     print('Failed to load README.md as long_description')
 
 setup(
-    name='geoplotter',
+    name='theto',
     version='0.1.0',
     description='Workflow automation for exploring location data',
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Valassis Digital',
-    url='https://github.com/Valassis-Digital-Media/geoplotter',
+    url='https://github.com/Valassis-Digital-Media/theto',
     platforms=['Linux', 'Mac OSX', 'Windows'],
     packages=find_packages(),
     include_package_data=True,

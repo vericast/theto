@@ -7,13 +7,12 @@ from bokeh.resources import CDN
 from bokeh.layouts import Row, Column, WidgetBox
 from bokeh.models import CustomJS, CustomJSFilter, CDSView
 
-from os import getcwd, path
+from os import path
 from pandas import DataFrame
 from numpy import mean, array
 from shapely.wkt import dumps
 
-import utils
-
+from . import bokeh_utils, coordinate_utils, color_utils, gmaps_utils
 
 class WorkflowOrderError(Exception):
     pass
@@ -69,7 +68,7 @@ class Theto(object):
         self.api_key = api_key
         self.precision = precision
         if categorical_palette is None:
-            self.categorical_palette = utils.colors.COLORBLIND_PALETTE
+            self.categorical_palette = color_utils.COLORBLIND_PALETTE
         else:
             self.categorical_palette = categorical_palette
 
@@ -162,16 +161,16 @@ class Theto(object):
         """
         
         if type(value) == str:           
-            if utils.coordinates.validate_geohash(value):
-                return utils.coordinates.geohash_to_coords(value, precision=self.precision)
-            elif utils.coordinates.validate_wellknowntext(value):
-                return utils.coordinates.shape_to_coords(value, precision=self.precision, wkt=True)
+            if coordinate_utils.validate_geohash(value):
+                return coordinate_utils.geohash_to_coords(value, precision=self.precision)
+            elif coordinate_utils.validate_wellknowntext(value):
+                return coordinate_utils.shape_to_coords(value, precision=self.precision, wkt=True)
             else:
                 raise ValueError('Unparseable string input.')  
         elif type(value) in (tuple, list):
             if len(value) == 2:
                 if all(isinstance(v, float) for v in value):
-                    return utils.coordinates.shape_to_coords(
+                    return coordinate_utils.shape_to_coords(
                         value, 
                         precision=self.precision,
                         wkt=False,
@@ -181,8 +180,8 @@ class Theto(object):
                     raise ValueError('Unparseable list input.')  
             else:
                 raise ValueError('List contains too many elements.')
-        elif utils.coordinates.validate_shapelyobject(value):
-            return utils.coordinates.shape_to_coords(
+        elif coordinate_utils.validate_shapelyobject(value):
+            return coordinate_utils.shape_to_coords(
                 value, 
                 precision=self.precision, 
                 wkt=False
@@ -264,10 +263,10 @@ class Theto(object):
             for k, v in kwargs.items():
                 df[k] = v
 
-        df['x_coords_transform'] = utils.coordinates.coord_to_webmercator(
+        df['x_coords_transform'] = coordinate_utils.coord_to_webmercator(
             df['x_coords'], precision=self.precision, longitude=True
         )
-        df['y_coords_transform'] = utils.coordinates.coord_to_webmercator(
+        df['y_coords_transform'] = coordinate_utils.coord_to_webmercator(
             df['y_coords'], precision=self.precision, longitude=False
         )
         
@@ -292,7 +291,7 @@ class Theto(object):
         
         if 'raw_data' in df.columns:
             df['raw_data'] = df['raw_data'].apply(
-                lambda ob: dumps(ob) if utils.coordinates.validate_shapelyobject(ob) else ob
+                lambda ob: dumps(ob) if coordinate_utils.validate_shapelyobject(ob) else ob
             )
         
         if uid is None:
@@ -314,7 +313,7 @@ class Theto(object):
         Parameters:
             source_label (str): the label for the data source to be used for the widget
             widget_type (str): a widget that is a valid key from
-                `Theto.utils.bokeh.WIDGETS`.
+                `bokeh_utils.WIDGETS`.
             widget_name (str): an arbitrary name that can be used to identify the widget
                 (necessary if `custom_js` is not None).
             reference (str): a column name from `self.sources[source_label]` that the widget
@@ -334,8 +333,8 @@ class Theto(object):
         
         ref_array = source[reference].tolist()
 
-        widget = utils.bokeh.WIDGETS[widget_type](name=widget_name, **{
-            k: v if v != 'auto' else utils.bokeh.auto_widget_kwarg(widget_type, k, ref_array)
+        widget = bokeh_utils.WIDGETS[widget_type](name=widget_name, **{
+            k: v if v != 'auto' else bokeh_utils.auto_widget_kwarg(widget_type, k, ref_array)
             for k, v in kwargs.items()
         })
 
@@ -356,7 +355,7 @@ class Theto(object):
                 
             js_filter = CustomJSFilter(
                 args=dict(widget=widget, reference=reference), 
-                code=utils.bokeh.FILTERS[widget_type]
+                code=bokeh_utils.FILTERS[widget_type]
             )
             
         else:
@@ -437,7 +436,7 @@ class Theto(object):
         
         self._validate_workflow('prepare_plot')
         
-        zoom_level, lat_center, lng_center, auto_plot_height = utils.gmaps.estimate_zoom(
+        zoom_level, lat_center, lng_center, auto_plot_height = gmaps_utils.estimate_zoom(
             plot_width,
             x_bounds=(self.xmin, self.xmax),
             y_bounds=(self.ymin, self.ymax)
@@ -472,26 +471,26 @@ class Theto(object):
             )
             self.plot.api_key = self.api_key
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
-        elif map_type in utils.bokeh.TILES.keys():
+        elif map_type in bokeh_utils.TILES.keys():
             x_range = Range1d(
-                start=utils.coordinates.coord_to_webmercator(
+                start=coordinate_utils.coord_to_webmercator(
                     self.xmin - 0.001, 
                     precision=self.precision, 
                     longitude=True
                 ), 
-                end=utils.coordinates.coord_to_webmercator(
+                end=coordinate_utils.coord_to_webmercator(
                     self.xmax + 0.001, 
                     precision=self.precision,
                     longitude=True
                 )
             )
             y_range = Range1d(
-                start=utils.coordinates.coord_to_webmercator(
+                start=coordinate_utils.coord_to_webmercator(
                     self.ymin - 0.001, 
                     precision=self.precision,
                     longitude=False
                 ), 
-                end=utils.coordinates.coord_to_webmercator(
+                end=coordinate_utils.coord_to_webmercator(
                     self.ymax + 0.001, 
                     precision=self.precision,
                     longitude=False
@@ -506,7 +505,7 @@ class Theto(object):
                 **kwargs
             )
             
-            self.plot.add_tile(utils.bokeh.TILES[map_type])
+            self.plot.add_tile(bokeh_utils.TILES[map_type])
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
         else:
             raise ValueError('Invalid map_type.')
@@ -567,15 +566,15 @@ class Theto(object):
         if self.plot is None:
             raise AssertionError('self.plot is null; call `self.prepare_plot`.')
 
-        if bokeh_model not in utils.bokeh.MODELS:
+        if bokeh_model not in bokeh_utils.MODELS:
             raise ValueError(
                 'Valid values for `bokeh_model` are: {}'.format(
-                    ', '.join([repr(x) for x in utils.bokeh.MODELS.keys()])
+                    ', '.join([repr(x) for x in bokeh_utils.MODELS.keys()])
                 )
             )
             
-        bokeh_model = utils.bokeh.MODELS[bokeh_model]
-        kwargs, new_fields = utils.bokeh.prepare_properties(
+        bokeh_model = bokeh_utils.MODELS[bokeh_model]
+        kwargs, new_fields = bokeh_utils.prepare_properties(
             bokeh_model, kwargs, self.sources[source_label], self.categorical_palette,
             start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex, color_transform=color_transform, 
         )
@@ -585,7 +584,7 @@ class Theto(object):
         for k, v in new_fields.items():
             self.columndatasources[source_label].data[k] = v
 
-        if bokeh_model == utils.bokeh.MODELS['MultiPolygons']:
+        if bokeh_model == bokeh_utils.MODELS['MultiPolygons']:
             if type(self.plot) == GMapPlot:
                 raise ValueError(
                     '\n'.join(
@@ -596,7 +595,7 @@ class Theto(object):
                     )
                 )  
             model_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
-        elif bokeh_model == utils.bokeh.MODELS['Patches']:
+        elif bokeh_model == bokeh_utils.MODELS['Patches']:
             model_object = bokeh_model(xs='xse', ys='yse', name=source_label, **kwargs)                
         else:
             model_object = bokeh_model(x='xsp', y='ysp', name=source_label, **kwargs)

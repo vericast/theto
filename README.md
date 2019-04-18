@@ -17,7 +17,7 @@ for those widgets based on the source data.
 
 A Jupyter notebook demonstrating a lot of `Theto`'s functionality can be found here:
 
-https://nbviewer.jupyter.org/github/Valassis-Digital-Media/Theto/blob/master/Theto_demo_notebook.ipynb
+https://nbviewer.jupyter.org/github/Valassis-Digital-Media/theto/blob/master/theto_demo_notebook.ipynb
 
 ## Supported data representations
 Data can be loaded in a variety of formats (geohashes, WKT, shapely objects, or coordinate pairs). The tool will 

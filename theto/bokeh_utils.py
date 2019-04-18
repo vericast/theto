@@ -4,7 +4,7 @@ from bokeh.tile_providers import get_provider, Vendors
 from bokeh.models import markers
 from bokeh.models.glyphs import MultiPolygons, Text, Patches
 
-from utils.colors import assign_colors, check_color
+from .color_utils import assign_colors, check_color
 
 # non-Google-Map map tile sources
 TILES = {
