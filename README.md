@@ -15,6 +15,10 @@ for those widgets based on the source data.
 5. Add layers of visualization, including tooltips and other visual aids, including connections between data points.
 6. Render the plot, either in the notebook or by saving to file, optionally appending an interactive legend.
 
+"Theto" is a transliteration of the Greek word Θέτω, which means "I place" or "I situate", or simply "I put". 
+That's what the tool does: it puts geospatial data where it needs to be so users can spend their time looking
+at and making sense of what's there.
+
 A Jupyter notebook demonstrating a lot of `Theto`'s functionality can be found here:
 
 https://nbviewer.jupyter.org/github/Valassis-Digital-Media/theto/blob/master/theto_demo_notebook.ipynb
