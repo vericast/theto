@@ -1,10 +1,10 @@
-# GeoPlotter: workflow automation for exploring location data
+# Theto: workflow automation for exploring location data
 
 Any visualization requires a large number of trivial decisions that, when added up, result in a non-trivial 
 impact on the quality and usability of the visualization. This is especially true of geospatial visualization,
 where data needs to transformed fit a particular map projection or a particular map tile service needs to be 
-configured to contextualize the plot. `GeoPlotter` abstracts a lot of this overhead so more time can be devoted
-to looking at and understanding the data. A `GeoPlotter` instance allows users to:
+configured to contextualize the plot. `Theto` abstracts a lot of this overhead so more time can be devoted
+to looking at and understanding the data. A `Theto` instance allows users to:
 
 1. Store api keys, palettes, and other static resources repeatedly needed throughout a typical visualization 
 pipeline.
@@ -15,9 +15,9 @@ for those widgets based on the source data.
 5. Add layers of visualization, including tooltips and other visual aids, including connections between data points.
 6. Render the plot, either in the notebook or by saving to file, optionally appending an interactive legend.
 
-A Jupyter notebook demonstrating a lot of `GeoPlotter`'s functionality can be found here:
+A Jupyter notebook demonstrating a lot of `Theto`'s functionality can be found here:
 
-https://nbviewer.jupyter.org/github/Valassis-Digital-Media/geoplotter/blob/master/geoplotter_demo_notebook.ipynb
+https://nbviewer.jupyter.org/github/Valassis-Digital-Media/Theto/blob/master/Theto_demo_notebook.ipynb
 
 ## Supported data representations
 Data can be loaded in a variety of formats (geohashes, WKT, shapely objects, or coordinate pairs). The tool will 
@@ -26,14 +26,14 @@ shape itself (a polygon) or as the centroid of the shape (a point). Polygons are
 `MultiPolygons` glyph. Points can be rendered using any of Bokeh's marker glyphs.
 
 ## Limitations
-`GeoPlotter` is designed for interactive exploration, and is therefore appropriate for small-to-medium sized data. 
+`Theto` is designed for interactive exploration, and is therefore appropriate for small-to-medium sized data. 
 A very rough benchmark indicated that it takes about 5 seconds to plot every 50,000 points (a polygon might contain 
 very many individual points) in a Jupyer notebook, and the notebook freezes at around 250,000 points. Outputting to 
 file and viewing in a separate browser window should allow up to around 1 million points. For larger visualization, 
 see http://datashader.org/.
 
 ## Contributing
-We welcome issues and pull requests that help improve the variety of data sources and plot elements GeoPlotter 
+We welcome issues and pull requests that help improve the variety of data sources and plot elements Theto 
 supports, its usability, and its re-usability within other tools.
 
 ## License

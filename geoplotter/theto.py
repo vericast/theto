@@ -1,8 +1,7 @@
-from bokeh.io import output_notebook, show, output_file, reset_output, save
+from bokeh.io import output_notebook, show, save
 from bokeh.models.glyphs import Quadratic, Segment
 from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot
 from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool
-from bokeh.models.renderers import GlyphRenderer
 from bokeh.models.annotations import Title, Legend, LegendItem
 from bokeh.resources import CDN
 from bokeh.layouts import Row, Column, WidgetBox
@@ -13,14 +12,14 @@ from pandas import DataFrame
 from numpy import mean, array
 from shapely.wkt import dumps
 
-import gp_utils
+import utils
 
 
 class WorkflowOrderError(Exception):
     pass
 
 
-class GeoPlotter(object):
+class Theto(object):
     """
     This class provides a wrapper to produce most of the boilerplate needed to use Bokeh to plot on 
     top of Google Maps or other tile images.
@@ -35,7 +34,7 @@ class GeoPlotter(object):
     API_KEY = (GET API KEY AT developers.google.com/maps/documentation/javascript/get-api-key)
     
     (
-        geoPlotter(api_key=API_KEY)
+        Theto(api_key=API_KEY)
         .add_source(geohashes, label='a', order=range(len(geohashes)))
         .prepare_plot(plot_width=700)
         .add_layer('a', Patches, color='yellow', alpha=0.5)
@@ -70,7 +69,7 @@ class GeoPlotter(object):
         self.api_key = api_key
         self.precision = precision
         if categorical_palette is None:
-            self.categorical_palette = gp_utils.colors.COLORBLIND_PALETTE
+            self.categorical_palette = utils.colors.COLORBLIND_PALETTE
         else:
             self.categorical_palette = categorical_palette
 
@@ -163,16 +162,16 @@ class GeoPlotter(object):
         """
         
         if type(value) == str:           
-            if gp_utils.coordinates.validate_geohash(value):
-                return gp_utils.coordinates.geohash_to_coords(value, precision=self.precision)
-            elif gp_utils.coordinates.validate_wellknowntext(value):
-                return gp_utils.coordinates.shape_to_coords(value, precision=self.precision, wkt=True)
+            if utils.coordinates.validate_geohash(value):
+                return utils.coordinates.geohash_to_coords(value, precision=self.precision)
+            elif utils.coordinates.validate_wellknowntext(value):
+                return utils.coordinates.shape_to_coords(value, precision=self.precision, wkt=True)
             else:
                 raise ValueError('Unparseable string input.')  
         elif type(value) in (tuple, list):
             if len(value) == 2:
                 if all(isinstance(v, float) for v in value):
-                    return gp_utils.coordinates.shape_to_coords(
+                    return utils.coordinates.shape_to_coords(
                         value, 
                         precision=self.precision,
                         wkt=False,
@@ -182,8 +181,8 @@ class GeoPlotter(object):
                     raise ValueError('Unparseable list input.')  
             else:
                 raise ValueError('List contains too many elements.')
-        elif gp_utils.coordinates.validate_shapelyobject(value):
-            return gp_utils.coordinates.shape_to_coords(
+        elif utils.coordinates.validate_shapelyobject(value):
+            return utils.coordinates.shape_to_coords(
                 value, 
                 precision=self.precision, 
                 wkt=False
@@ -265,10 +264,10 @@ class GeoPlotter(object):
             for k, v in kwargs.items():
                 df[k] = v
 
-        df['x_coords_transform'] = gp_utils.coordinates.coord_to_webmercator(
+        df['x_coords_transform'] = utils.coordinates.coord_to_webmercator(
             df['x_coords'], precision=self.precision, longitude=True
         )
-        df['y_coords_transform'] = gp_utils.coordinates.coord_to_webmercator(
+        df['y_coords_transform'] = utils.coordinates.coord_to_webmercator(
             df['y_coords'], precision=self.precision, longitude=False
         )
         
@@ -293,7 +292,7 @@ class GeoPlotter(object):
         
         if 'raw_data' in df.columns:
             df['raw_data'] = df['raw_data'].apply(
-                lambda ob: dumps(ob) if gp_utils.coordinates.validate_shapelyobject(ob) else ob
+                lambda ob: dumps(ob) if utils.coordinates.validate_shapelyobject(ob) else ob
             )
         
         if uid is None:
@@ -315,7 +314,7 @@ class GeoPlotter(object):
         Parameters:
             source_label (str): the label for the data source to be used for the widget
             widget_type (str): a widget that is a valid key from
-                `geoplotter.gp_utils.bokeh.WIDGETS`.
+                `Theto.utils.bokeh.WIDGETS`.
             widget_name (str): an arbitrary name that can be used to identify the widget
                 (necessary if `custom_js` is not None).
             reference (str): a column name from `self.sources[source_label]` that the widget
@@ -335,8 +334,8 @@ class GeoPlotter(object):
         
         ref_array = source[reference].tolist()
 
-        widget = gp_utils.bokeh.WIDGETS[widget_type](name=widget_name, **{
-            k: v if v != 'auto' else gp_utils.bokeh.auto_widget_kwarg(widget_type, k, ref_array) 
+        widget = utils.bokeh.WIDGETS[widget_type](name=widget_name, **{
+            k: v if v != 'auto' else utils.bokeh.auto_widget_kwarg(widget_type, k, ref_array)
             for k, v in kwargs.items()
         })
 
@@ -357,7 +356,7 @@ class GeoPlotter(object):
                 
             js_filter = CustomJSFilter(
                 args=dict(widget=widget, reference=reference), 
-                code=gp_utils.bokeh.FILTERS[widget_type]
+                code=utils.bokeh.FILTERS[widget_type]
             )
             
         else:
@@ -438,7 +437,7 @@ class GeoPlotter(object):
         
         self._validate_workflow('prepare_plot')
         
-        zoom_level, lat_center, lng_center, auto_plot_height = gp_utils.gmaps.estimate_zoom(
+        zoom_level, lat_center, lng_center, auto_plot_height = utils.gmaps.estimate_zoom(
             plot_width,
             x_bounds=(self.xmin, self.xmax),
             y_bounds=(self.ymin, self.ymax)
@@ -473,26 +472,26 @@ class GeoPlotter(object):
             )
             self.plot.api_key = self.api_key
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
-        elif map_type in gp_utils.bokeh.TILES.keys():
+        elif map_type in utils.bokeh.TILES.keys():
             x_range = Range1d(
-                start=gp_utils.coordinates.coord_to_webmercator(
+                start=utils.coordinates.coord_to_webmercator(
                     self.xmin - 0.001, 
                     precision=self.precision, 
                     longitude=True
                 ), 
-                end=gp_utils.coordinates.coord_to_webmercator(
+                end=utils.coordinates.coord_to_webmercator(
                     self.xmax + 0.001, 
                     precision=self.precision,
                     longitude=True
                 )
             )
             y_range = Range1d(
-                start=gp_utils.coordinates.coord_to_webmercator(
+                start=utils.coordinates.coord_to_webmercator(
                     self.ymin - 0.001, 
                     precision=self.precision,
                     longitude=False
                 ), 
-                end=gp_utils.coordinates.coord_to_webmercator(
+                end=utils.coordinates.coord_to_webmercator(
                     self.ymax + 0.001, 
                     precision=self.precision,
                     longitude=False
@@ -507,7 +506,7 @@ class GeoPlotter(object):
                 **kwargs
             )
             
-            self.plot.add_tile(gp_utils.bokeh.TILES[map_type])
+            self.plot.add_tile(utils.bokeh.TILES[map_type])
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
         else:
             raise ValueError('Invalid map_type.')
@@ -568,15 +567,15 @@ class GeoPlotter(object):
         if self.plot is None:
             raise AssertionError('self.plot is null; call `self.prepare_plot`.')
 
-        if bokeh_model not in gp_utils.bokeh.MODELS:
+        if bokeh_model not in utils.bokeh.MODELS:
             raise ValueError(
                 'Valid values for `bokeh_model` are: {}'.format(
-                    ', '.join([repr(x) for x in gp_utils.bokeh.MODELS.keys()])
+                    ', '.join([repr(x) for x in utils.bokeh.MODELS.keys()])
                 )
             )
             
-        bokeh_model = gp_utils.bokeh.MODELS[bokeh_model]
-        kwargs, new_fields = gp_utils.bokeh.prepare_properties(
+        bokeh_model = utils.bokeh.MODELS[bokeh_model]
+        kwargs, new_fields = utils.bokeh.prepare_properties(
             bokeh_model, kwargs, self.sources[source_label], self.categorical_palette,
             start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex, color_transform=color_transform, 
         )
@@ -586,7 +585,7 @@ class GeoPlotter(object):
         for k, v in new_fields.items():
             self.columndatasources[source_label].data[k] = v
 
-        if bokeh_model == gp_utils.bokeh.MODELS['MultiPolygons']:
+        if bokeh_model == utils.bokeh.MODELS['MultiPolygons']:
             if type(self.plot) == GMapPlot:
                 raise ValueError(
                     '\n'.join(
@@ -597,7 +596,7 @@ class GeoPlotter(object):
                     )
                 )  
             model_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
-        elif bokeh_model == gp_utils.bokeh.MODELS['Patches']:
+        elif bokeh_model == utils.bokeh.MODELS['Patches']:
             model_object = bokeh_model(xs='xse', ys='yse', name=source_label, **kwargs)                
         else:
             model_object = bokeh_model(x='xsp', y='ysp', name=source_label, **kwargs)
