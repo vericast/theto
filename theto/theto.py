@@ -243,6 +243,9 @@ class Theto(object):
         """
         
         self._validate_workflow('add_source')
+
+        if coordinate_utils.detect_geojson(data):
+            data = coordinate_utils.import_geojson(data)
         
         # process data into x and y coordinates
         if type(data) == DataFrame:
@@ -252,6 +255,10 @@ class Theto(object):
         else:
             df = DataFrame({'raw_data': data})
             column_name = 'raw_data'
+
+        if df[column_name].apply(coordinate_utils.detect_geojson).all():
+            print('detected')
+            df[column_name] = df[column_name].apply(lambda v: coordinate_utils.import_geojson(v, self.precision))
 
         df['processed_data'] = df[column_name].apply(self._process_input_value)
         x_coords, y_coords = zip(*df['processed_data'].tolist())

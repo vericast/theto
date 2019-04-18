@@ -2,6 +2,9 @@ from geohash2 import decode_exactly
 from shapely.wkt import loads
 from pyproj import Proj, transform as pyproj_transform
 from math import log10
+from json import loads as json_loads
+from shapely.geometry import shape
+
 
 from shapely.geometry import (
     Polygon, 
@@ -47,6 +50,30 @@ def validate_geohash(value):
     return all(v in BASE32 for v in value)
 
 
+def detect_geojson(value):
+    """Check whether an input value is a valid geohash"""
+
+    if isinstance(value, str):
+        if '"features"' in value:
+            return True
+    return False
+
+
+def import_geojson(geojson, precision=6):
+
+    output = list()
+
+    for feature in json_loads(geojson)['features']:
+        shape_object = shape(feature["geometry"])
+
+        if isinstance(shape_object, Point):
+            shape_object = shape_object .buffer(0.1 ** precision).envelope
+
+        output.append(shape_object)
+
+    return output
+
+
 def validate_wellknowntext(value):
     """Check whether an input value is valid well-known text"""
         
@@ -77,7 +104,7 @@ def geohash_to_coords(value, precision=6):
         round(y + y_margin, precision)
     ]
 
-    return [{'exterior': x_coords, 'holes': []}], [{'exterior': y_coords, 'holes':[]}]
+    return [{'exterior': x_coords, 'holes': []}], [{'exterior': y_coords, 'holes': []}]
 
 
 def shape_to_coords(value, precision=6, wkt=False, is_point=False):
@@ -154,4 +181,3 @@ def coord_to_webmercator(c, precision=6, longitude=True):
             output.append(newrow)
 
     return output
-    
