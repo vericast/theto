@@ -17,13 +17,13 @@ def minmax_scale(x, out_range=(-1, 1)):
 
 
 def hex_to_rgb(hexcode):
-    ''' "#FFFFFF" -> [255,255,255] '''
+    """'#FFFFFF' -> [255,255,255] """
     # Pass 16 to the integer function for change of base
-    return [int(hexcode[i:i+2], 16) for i in range(1,6,2)]
+    return [int(hexcode[i:i+2], 16) for i in range(1, 6, 2)]
 
 
 def rgb_to_hex(rgb):
-    ''' [255,255,255] -> "#FFFFFF" '''
+    """ [255,255,255] -> '#FFFFFF' """
     # Components need to be integers for hex to make sense
     rgb = [int(x) for x in rgb]
     return "#"+"".join(["0{0:x}".format(v) if v < 16 else "{0:x}".format(v) for v in rgb])
@@ -52,7 +52,7 @@ def check_numeric(val):
 
     
 def color_gradient(vals, start_hex, end_hex, mid_hex='#ffffff', trans=None):
-    ''' 
+    """
     Returns a gradient list of colors between two hex colors (adapted 
     from https://bsou.io/posts/color-gradients-with-python). Gradient 
     is spaced linearly with the numerical values of (optionally transformed) 
@@ -61,7 +61,7 @@ def color_gradient(vals, start_hex, end_hex, mid_hex='#ffffff', trans=None):
     Values for start_hex and end_hex should be the full six-digit color string, 
     including the number sign ("#FFFFFF").
     
-    '''
+    """
     
     # convert vals to array
     sarr = array(vals).astype('float64')
@@ -102,9 +102,7 @@ def color_gradient(vals, start_hex, end_hex, mid_hex='#ffffff', trans=None):
         return sarr_new
 
 
-def assign_colors(
-    color_arr, start=None, end=None, mid='#ffffff', trans=None, 
-    categorical_palette=None):
+def assign_colors(color_arr, start=None, end=None, mid='#ffffff', trans=None, categorical_palette=None):
 
     if categorical_palette is None:
         categorical_palette = COLORBLIND_PALETTE

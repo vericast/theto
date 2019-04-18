@@ -1,8 +1,9 @@
 from math import sin, pi, log, floor
 
+
 def lat_rad(lat):
-    "Convert a latitude to radians (for estimating zoom factor for Google Maps)."
-    sine = sin(lat * pi / 180.);
+    """Convert a latitude to radians (for estimating zoom factor for Google Maps)."""
+    sine = sin(lat * pi / 180.)
     rad_x2 = log((1 + sine) / (1 - sine)) / 2.
     return max(min(rad_x2, pi), -pi) / 2.
 
@@ -10,7 +11,7 @@ def lat_rad(lat):
 def zoom(map_px, world_px, fraction):
     """Calculate the zoom factor for Google Maps."""
     try:
-        return floor(log(map_px / world_px / fraction) / log(2));
+        return floor(log(map_px / world_px / fraction) / log(2))
     except ZeroDivisionError:
         return None
 
@@ -44,7 +45,7 @@ def estimate_zoom(plot_width, x_bounds, y_bounds, height_max=600, zoom_max=21, w
     if (x_range == 0) or (y_range == 0):
         plot_height = height_max
     else:
-        plot_height=int((plot_width / x_range) * y_range)
+        plot_height = int((plot_width / x_range) * y_range)
     if plot_height < plot_width:
         plot_height = plot_width
     if plot_height > height_max:

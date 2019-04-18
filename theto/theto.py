@@ -9,10 +9,11 @@ from bokeh.models import CustomJS, CustomJSFilter, CDSView
 
 from os import path
 from pandas import DataFrame
-from numpy import mean, array
+from numpy import mean, array, round as npround
 from shapely.wkt import dumps
 
 from . import bokeh_utils, coordinate_utils, color_utils, gmaps_utils
+
 
 class WorkflowOrderError(Exception):
     pass
@@ -38,7 +39,10 @@ class Theto(object):
         .prepare_plot(plot_width=700)
         .add_layer('a', Patches, color='yellow', alpha=0.5)
         .add_layer('a', Circle, color='blue', size=20, alpha=0.75)
-        .add_layer('a', Text, text='order', text_color='white', text_font_size='10pt', text_align='center', text_baseline='middle')
+        .add_layer(
+            'a', Text, text='order', text_color='white', text_font_size='10pt', text_align='center',
+            text_baseline='middle'
+        )
         .render_plot('auto')
     )
     """
@@ -95,6 +99,7 @@ class Theto(object):
             'add_layer': False,
             'render_plot': False
         }
+        self.remove_columns = dict()
         
     def _validate_workflow(self, stage):
         """
@@ -258,7 +263,7 @@ class Theto(object):
 
         if df[column_name].apply(coordinate_utils.detect_geojson).all():
             print('detected')
-            df[column_name] = df[column_name].apply(lambda v: coordinate_utils.import_geojson(v, self.precision))
+            df[column_name] = df[column_name].apply(lambda blob: coordinate_utils.import_geojson(blob, self.precision))
 
         df['processed_data'] = df[column_name].apply(self._process_input_value)
         x_coords, y_coords = zip(*df['processed_data'].tolist())
@@ -278,19 +283,19 @@ class Theto(object):
         )
         
         df['x_coord_point'] = [
-            round(mean(d['exterior']), self.precision) 
+            npround(mean(d['exterior']), self.precision)
             for x in df['x_coords'] for d in x
         ]
         df['y_coord_point'] = [
-            round(mean(d['exterior']), self.precision) 
+            npround(mean(d['exterior']), self.precision)
             for x in df['y_coords'] for d in x
         ]
         df['x_coord_point_transform'] = [
-            round(mean(d['exterior']), self.precision) 
+            npround(mean(d['exterior']), self.precision)
             for x in df['x_coords_transform'] for d in x
         ]
         df['y_coord_point_transform'] = [
-            round(mean(d['exterior']), self.precision) 
+            npround(mean(d['exterior']), self.precision)
             for x in df['y_coords_transform'] for d in x
         ]
         
@@ -309,6 +314,7 @@ class Theto(object):
             df['uid'] = uid
             
         self.sources[label] = df.copy()
+        self.remove_columns[label] = ['f', 'e', 'p']
         self.validation['add_source'] = True
         
         return self
@@ -422,7 +428,8 @@ class Theto(object):
     
     def prepare_plot(
         self, plot_width=700, plot_height=None, zoom=None, map_type='hybrid', 
-        title=None, **kwargs):
+        title=None, **kwargs
+    ):
         """
         Create the actual plot object (stored in `self.plot`).
         
@@ -540,7 +547,8 @@ class Theto(object):
     def add_layer(
         self, source_label, bokeh_model='MultiPolygons', tooltips=None, legend=None, 
         start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None, 
-        **kwargs):
+        **kwargs
+    ):
         """
         Add bokeh models (glyphs or markers) to `self.plot`. 
         `self.prepare_plot` must have been called previous to this.
@@ -602,10 +610,23 @@ class Theto(object):
                     )
                 )  
             model_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
+
+            if 'f' in self.remove_columns[source_label]:
+                _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('f'))
+
         elif bokeh_model == bokeh_utils.MODELS['Patches']:
-            model_object = bokeh_model(xs='xse', ys='yse', name=source_label, **kwargs)                
+
+            model_object = bokeh_model(xs='xse', ys='yse', name=source_label, **kwargs)
+
+            if 'e' in self.remove_columns[source_label]:
+                _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('e'))
+
         else:
+
             model_object = bokeh_model(x='xsp', y='ysp', name=source_label, **kwargs)
+
+            if 'p' in self.remove_columns[source_label]:
+                _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('p'))
 
         if source_label in self.views:
             rend = self.plot.add_glyph(source, model_object, view=self.views[source_label])
@@ -613,7 +634,7 @@ class Theto(object):
             rend = self.plot.add_glyph(source, model_object)
 
         if legend is not None:
-            li = LegendItem(label=legend,renderers=[rend])
+            li = LegendItem(label=legend, renderers=[rend])
             self.legend.items.append(li)
     
         if tooltips is not None:
@@ -623,7 +644,6 @@ class Theto(object):
         
         return self
 
-            
     def add_path(self, source_label, links=None, edge_type='curved', tooltips=None, legend=None, **kwargs):
         """
         Connect all points in the datasource in a path (to show order).
@@ -702,13 +722,13 @@ class Theto(object):
         
         if 'color' in kwargs.keys():
             color = kwargs.pop('color')
-            for v in bokeh_model.dataspecs():
+            for v in Quadratic.dataspecs():
                 if 'color' in v:
                     kwargs[v] = color
 
         if 'alpha' in kwargs.keys():
             alpha = kwargs.pop('alpha')
-            for v in bokeh_model.dataspecs():
+            for v in Quadratic.dataspecs():
                 if 'alpha' in v:
                     kwargs[v] = alpha
                 
@@ -720,13 +740,14 @@ class Theto(object):
             model_object = Segment(
                 x0='x1', y0='y1', x1="x2", y1="y2", name=source_label, **kwargs
             )
+        else:
+            raise ValueError('Keyword `edge_type` must be either "curved" or "straight".')
 
         source = ColumnDataSource(new_source, name=source_label)
-     
         rend = self.plot.add_glyph(source, model_object)
         
         if legend is not None:
-            li = LegendItem(label=legend,renderers=[rend])
+            li = LegendItem(label=legend, renderers=[rend])
             self.legend.items.append(li)
     
         if tooltips is not None:
@@ -736,7 +757,8 @@ class Theto(object):
             
     def render_plot(
         self, display_type='object', directory=None, legend_position='below', 
-        legend_orientation='horizontal', widget_position='left'):
+        legend_orientation='horizontal', widget_position='left'
+    ):
         """
         Pull everything together into a plot ready for display.
         
@@ -756,6 +778,11 @@ class Theto(object):
         """
         
         self._validate_workflow('render_plot')
+
+        for k in self.columndatasources.keys():
+            for suffix in self.remove_columns[k]:
+                self.columndatasources[k].data.pop('xs' + suffix)
+                self.columndatasources[k].data.pop('ys' + suffix)
         
         if len(self.legend.items) > 0:
             self.legend.orientation = legend_orientation

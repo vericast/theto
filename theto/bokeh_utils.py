@@ -7,14 +7,22 @@ from bokeh.models.glyphs import MultiPolygons, Text, Patches
 from .color_utils import assign_colors, check_color
 
 # non-Google-Map map tile sources
+ESRI_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
+OSMBW_URL = 'https://tiles.wmflabs.org/bw-mapnik/${z}/${x}/${y}.png'
+OSM_URL = 'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+WIKI_URL = 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}@2x.png'
+STAMENTONER_URL = get_provider(Vendors.STAMEN_TONER).url.replace('http://', 'https://')
+STAMENTERRAIN_URL = get_provider(Vendors.STAMEN_TERRAIN_RETINA).url.replace('http://', 'https://')
+CARTODB_URL = get_provider(Vendors.CARTODBPOSITRON_RETINA).url.replace('http://', 'https://')
+
 TILES = {
-    'osmb&w': WMTSTileSource(url='https://tiles.wmflabs.org/bw-mapnik/${z}/${x}/${y}.png'),
-    'osm': WMTSTileSource(url='https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-    'esri': WMTSTileSource(url='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'),
-    'wikipedia': WMTSTileSource(url='https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}@2x.png'),
-    'stamentoner': WMTSTileSource(url=get_provider(Vendors.STAMEN_TONER).url.replace('http://', 'https://')),
-    'stamenterrain': WMTSTileSource(url=get_provider(Vendors.STAMEN_TERRAIN_RETINA).url.replace('http://', 'https://')),
-    'cartodb': WMTSTileSource(url=get_provider(Vendors.CARTODBPOSITRON_RETINA).url.replace('http://', 'https://'))
+    'osmb&w': WMTSTileSource(url=OSMBW_URL),
+    'osm': WMTSTileSource(url=OSM_URL),
+    'esri': WMTSTileSource(url=ESRI_URL),
+    'wikipedia': WMTSTileSource(url=WIKI_URL),
+    'stamentoner': WMTSTileSource(url=STAMENTONER_URL),
+    'stamenterrain': WMTSTileSource(url=STAMENTERRAIN_URL),
+    'cartodb': WMTSTileSource(url=CARTODB_URL)
 }
 
 # all supported models
@@ -23,7 +31,7 @@ MODELS['MultiPolygons'] = MultiPolygons
 MODELS['Patches'] = Patches
 MODELS['Text'] = Text
 
-MODELS_REVERSE = {v:k for k, v in MODELS.items()}
+MODELS_REVERSE = {v: k for k, v in MODELS.items()}
 
 # all supported widgets
 WIDGETS = {
@@ -149,7 +157,7 @@ def auto_widget_kwarg(widget_type, kwarg, reference_array):
         if kwarg == 'end':
             return max(reference_array)
         if kwarg == 'value':
-            return (min(reference_array), max(reference_array))
+            return min(reference_array), max(reference_array)
         raise ValueError(
             'The only auto-populating kwargs for {} are `start`, `end` and `value`.'.format(widget_type)
         ) 
@@ -172,7 +180,7 @@ def auto_widget_kwarg(widget_type, kwarg, reference_array):
         raise ValueError(
             'The only auto-populating kwargs for {} are `menu` and `value`.'.format(widget_type)
         )    
-    if widget_type in ("RadioButtonGroup"):
+    if widget_type in ("RadioButtonGroup", ):
         reference_set = list(set(reference_array))
         if kwarg == 'labels':
             return reference_set
@@ -187,7 +195,8 @@ def auto_widget_kwarg(widget_type, kwarg, reference_array):
     
 def prepare_properties(
     bokeh_model, kwargs, source_df, categorical_palette=None,
-    start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None): 
+    start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None
+):
     """
     For a particular Bokeh model and accompanying keyword arguents,
     automatically set color and alpha values.
