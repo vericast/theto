@@ -24,7 +24,11 @@ A Jupyter notebook demonstrating a lot of `Theto`'s functionality can be found h
 https://nbviewer.jupyter.org/github/Valassis-Digital-Media/theto/blob/master/theto_demo_notebook.ipynb
 
 ## Installation
-`pip` and `conda` installations coming soon.
+To install from PyPI:
+
+`pip install theto`
+
+`conda` installation coming soon.
 
 ## Supported data representations
 Data can be loaded in a variety of formats (geohashes, WKT, shapely objects, GeoJSON, or coordinate pairs). The tool 
