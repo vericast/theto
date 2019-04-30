@@ -54,24 +54,28 @@ def detect_geojson(value):
     """Check whether an input value is a valid geohash"""
 
     if isinstance(value, str):
-        if '"features"' in value:
+        try:
+            _ = json_loads(value)
             return True
+        except Exception:
+            return False
     return False
 
 
-def import_geojson(geojson, precision=6):
+def import_geojson(feature, precision=6):
 
-    output = list()
+    json_dict = json_loads(feature)
+    if 'geometry' in json_dict:
+        shape_object = shape(json_dict["geometry"])
+    elif 'coordinates' in json_dict:
+        shape_object = shape(json_dict)
+    else:
+        raise KeyError('Unable to infer key for coordinate values.')
 
-    for feature in json_loads(geojson)['features']:
-        shape_object = shape(feature["geometry"])
+    if isinstance(shape_object, Point):
+        shape_object = shape_object.buffer(0.1 ** precision).envelope
 
-        if isinstance(shape_object, Point):
-            shape_object = shape_object .buffer(0.1 ** precision).envelope
-
-        output.append(shape_object)
-
-    return output
+    return shape_object
 
 
 def validate_wellknowntext(value):

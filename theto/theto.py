@@ -249,9 +249,6 @@ class Theto(object):
         
         self._validate_workflow('add_source')
 
-        if coordinate_utils.detect_geojson(data):
-            data = coordinate_utils.import_geojson(data)
-        
         # process data into x and y coordinates
         if type(data) == DataFrame:
             if column_name is None:
@@ -262,8 +259,7 @@ class Theto(object):
             column_name = 'raw_data'
 
         if df[column_name].apply(coordinate_utils.detect_geojson).all():
-            print('detected')
-            df[column_name] = df[column_name].apply(lambda blob: coordinate_utils.import_geojson(blob, self.precision))
+            df[column_name] = df[column_name].apply(lambda feat: coordinate_utils.import_geojson(feat, self.precision))
 
         df['processed_data'] = df[column_name].apply(self._process_input_value)
         x_coords, y_coords = zip(*df['processed_data'].tolist())
@@ -427,7 +423,7 @@ class Theto(object):
         return source
     
     def prepare_plot(
-        self, plot_width=700, plot_height=None, zoom=None, map_type='hybrid', 
+        self, plot_width=700, plot_height=None, zoom=None, map_type='cartodb',
         title=None, **kwargs
     ):
         """
