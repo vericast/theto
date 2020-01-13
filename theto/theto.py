@@ -72,7 +72,7 @@ class Theto(object):
         self.api_key = api_key
         self.precision = precision
         self.autohide = autohide
-        
+
         if categorical_palette is None:
             self.categorical_palette = color_utils.COLORBLIND_PALETTE
         else:
@@ -298,12 +298,11 @@ class Theto(object):
         ]
         
         self._set_coordinate_bounds(df)
-        
-        if 'raw_data' in df.columns:
-            df['raw_data'] = df['raw_data'].apply(
-                lambda ob: dumps(ob) if coordinate_utils.validate_shapelyobject(ob) else ob
-            )
-        
+
+        df[column_name] = df[column_name].apply(
+            lambda ob: dumps(ob) if coordinate_utils.validate_shapelyobject(ob) else ob
+        )
+
         if uid is None:
             df['uid'] = range(df.shape[0])
         elif type(uid) is str:
