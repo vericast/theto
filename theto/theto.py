@@ -47,7 +47,7 @@ class Theto(object):
     )
     """
     
-    def __init__(self, api_key=None, categorical_palette=None, precision=6):
+    def __init__(self, api_key=None, categorical_palette=None, precision=6, autohide=True):
         """
         Instantiate the class.
         
@@ -71,6 +71,8 @@ class Theto(object):
         """
         self.api_key = api_key
         self.precision = precision
+        self.autohide = autohide
+        
         if categorical_palette is None:
             self.categorical_palette = color_utils.COLORBLIND_PALETTE
         else:
@@ -797,7 +799,8 @@ class Theto(object):
                 self.plot = Column(children=[WidgetBox(children=widget_list), self.plot])
             if widget_position == 'below':
                 self.plot = Column(children=[self.plot, WidgetBox(children=widget_list)])
-                
+
+        self.plot.toolbar.autohide = self.autohide
         self.validation['render_plot'] = True
         
         if display_type == 'notebook':
