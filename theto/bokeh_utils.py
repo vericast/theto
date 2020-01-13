@@ -1,7 +1,6 @@
 from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider, Dropdown, RadioButtonGroup
-from bokeh.models import WMTSTileSource
 from bokeh.tile_providers import get_provider, Vendors
-from bokeh.models import markers
+from bokeh.models import markers, WMTSTileSource
 from bokeh.models.glyphs import MultiPolygons, Text, Patches
 
 from .color_utils import assign_colors, check_color
@@ -15,15 +14,24 @@ STAMENTONER_URL = get_provider(Vendors.STAMEN_TONER).url.replace('http://', 'htt
 STAMENTERRAIN_URL = get_provider(Vendors.STAMEN_TERRAIN_RETINA).url.replace('http://', 'https://')
 CARTODB_URL = get_provider(Vendors.CARTODBPOSITRON_RETINA).url.replace('http://', 'https://')
 
-TILES = {
-    'osmb&w': WMTSTileSource(url=OSMBW_URL),
-    'osm': WMTSTileSource(url=OSM_URL),
-    'esri': WMTSTileSource(url=ESRI_URL),
-    'wikipedia': WMTSTileSource(url=WIKI_URL),
-    'stamentoner': WMTSTileSource(url=STAMENTONER_URL),
-    'stamenterrain': WMTSTileSource(url=STAMENTERRAIN_URL),
-    'cartodb': WMTSTileSource(url=CARTODB_URL)
-}
+
+def get_tile_source(name):
+
+    tiles = {
+        'osmb&w': WMTSTileSource(url=OSMBW_URL),
+        'osm': WMTSTileSource(url=OSM_URL),
+        'esri': WMTSTileSource(url=ESRI_URL),
+        'wikipedia': WMTSTileSource(url=WIKI_URL),
+        'stamentoner': WMTSTileSource(url=STAMENTONER_URL),
+        'stamenterrain': WMTSTileSource(url=STAMENTERRAIN_URL),
+        'cartodb': WMTSTileSource(url=CARTODB_URL)
+    }
+
+    if name not in tiles:
+        return None
+
+    return tiles[name]
+
 
 # all supported models
 MODELS = {k: getattr(markers, k) for k in markers.__all__}

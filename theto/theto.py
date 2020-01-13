@@ -481,7 +481,7 @@ class Theto(object):
             )
             self.plot.api_key = self.api_key
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
-        elif map_type in bokeh_utils.TILES.keys():
+        elif get_tile_source(map_type) is not None:
             x_range = Range1d(
                 start=coordinate_utils.coord_to_webmercator(
                     self.xmin - 0.001, 
@@ -515,7 +515,7 @@ class Theto(object):
                 **kwargs
             )
             
-            self.plot.add_tile(bokeh_utils.TILES[map_type])
+            self.plot.add_tile(get_tile_source(map_type))
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
         else:
             raise ValueError('Invalid map_type.')
