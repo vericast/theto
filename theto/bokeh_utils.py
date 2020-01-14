@@ -1,7 +1,7 @@
 from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider, Dropdown, RadioButtonGroup
 from bokeh.tile_providers import get_provider, Vendors
 from bokeh.models import markers, WMTSTileSource
-from bokeh.models.glyphs import MultiPolygons, Text, Patches
+from bokeh.models.glyphs import MultiPolygons, Text
 
 from .color_utils import assign_colors, check_color
 
@@ -36,7 +36,6 @@ def get_tile_source(name):
 # all supported models
 MODELS = {k: getattr(markers, k) for k in markers.__all__}
 MODELS['MultiPolygons'] = MultiPolygons
-MODELS['Patches'] = Patches
 MODELS['Text'] = Text
 
 MODELS_REVERSE = {v: k for k, v in MODELS.items()}

@@ -9,14 +9,20 @@ from bokeh.models import CustomJS, CustomJSFilter, CDSView
 
 from os import path
 from pandas import DataFrame
-from numpy import mean, array, round as npround
-from shapely.wkt import dumps
+from numpy import array
 
 from . import bokeh_utils, coordinate_utils, color_utils, gmaps_utils
 
 
 class WorkflowOrderError(Exception):
     pass
+
+
+def flatten(items, seqtypes=(list, tuple)):
+    for i, x in enumerate(items):
+        while i < len(items) and isinstance(items[i], seqtypes):
+            items[i:i+1] = items[i]
+    return items
 
 
 class Theto(object):
@@ -47,7 +53,7 @@ class Theto(object):
     )
     """
     
-    def __init__(self, api_key=None, categorical_palette=None, precision=6, autohide=True):
+    def __init__(self, api_key=None, categorical_palette=None, precision=6, autohide=True, padding=0.05):
         """
         Instantiate the class.
         
@@ -67,11 +73,23 @@ class Theto(object):
             GPS signal can be expected to be. This precision will get automatically
             transformed in cases where latitude and longitude are projected
             to web Mercator maps.
+
+        autohide (bool): if True, the toolbar on plots will be hidden unless the
+            mouse is hovering over the plot itself.
+
+        padding (float): the minimum amount of space that should exist between the
+            plotted objects and the edge of the map, expressed as a percentage
+            of the range of the relevant direction. So a padding factor of 0.05 (the
+            default) will multiply the factor by the maximum latitude minus the minimum
+            latitude and add that amount to the top and bottom edges of the graph, and
+            then multiply the factor by the maximum longitude minus the minimum
+            longitdue and add that amount to the right and left edges of the graph.
         
         """
         self.api_key = api_key
         self.precision = precision
         self.autohide = autohide
+        self.padding = padding
 
         if categorical_palette is None:
             self.categorical_palette = color_utils.COLORBLIND_PALETTE
@@ -158,73 +176,42 @@ class Theto(object):
                 raise WorkflowOrderError('Method `render_plot` has already been called. Start new workflow.')
             if self.validation['add_widget']:
                 raise WorkflowOrderError('Plot contains widgets, which are not compatible with paths.')
-        
-    def _process_input_value(self, value):
-        """
-        Router function for values: take an arbitrary value, 
-        determine what kind of input it is, and return 
-        a standardized coordinate output.
-        
-        """
-        
-        if type(value) == str:           
-            if coordinate_utils.validate_geohash(value):
-                return coordinate_utils.geohash_to_coords(value, precision=self.precision)
-            elif coordinate_utils.validate_wellknowntext(value):
-                return coordinate_utils.shape_to_coords(value, precision=self.precision, wkt=True)
-            else:
-                raise ValueError('Unparseable string input.')  
-        elif type(value) in (tuple, list):
-            if len(value) == 2:
-                if all(isinstance(v, float) for v in value):
-                    return coordinate_utils.shape_to_coords(
-                        value, 
-                        precision=self.precision,
-                        wkt=False,
-                        is_point=True
-                    )
-                else:
-                    raise ValueError('Unparseable list input.')  
-            else:
-                raise ValueError('List contains too many elements.')
-        elif coordinate_utils.validate_shapelyobject(value):
-            return coordinate_utils.shape_to_coords(
-                value, 
-                precision=self.precision, 
-                wkt=False
-            )
-        else:
-            raise ValueError('Unrecognizeable input.')
-    
+
     def _set_coordinate_bounds(self, df):
         """
         Given a new source DataFrame, set or update 
         coordinate bounds for the plot.
         
         """
-        
-        xmin = df['x_coords'].apply(lambda l: min([min(d['exterior']) for d in l])).min()
-        xmax = df['x_coords'].apply(lambda l: max([max(d['exterior']) for d in l])).max()
-        ymin = df['y_coords'].apply(lambda l: min([min(d['exterior']) for d in l])).min()
-        ymax = df['y_coords'].apply(lambda l: max([max(d['exterior']) for d in l])).max()
+
+        x_coords = flatten(df['x_coords'].tolist())
+        y_coords = flatten(df['y_coords'].tolist())
+
+        xmin = min(x_coords)
+        xmax = max(x_coords)
+        ymin = min(y_coords)
+        ymax = max(y_coords)
         
         if self.xmin is not None:
             if xmin < self.xmin:
                 self.xmin = xmin
         else:
             self.xmin = xmin
+
         if self.xmax is not None:
             if xmax > self.xmax:
                 self.xmax = xmax
         else: 
             self.xmax = xmax
+
         if self.ymin is not None:
             if ymin < self.ymin:
                 self.ymin = ymin
         else:
             self.ymin = ymin
+
         if self.ymax is not None:
-            if ymax < self.ymax:
+            if ymax > self.ymax:
                 self.ymax = ymax
         else:
             self.ymax = ymax
@@ -256,52 +243,47 @@ class Theto(object):
             if column_name is None:
                 raise ValueError('If data is a dataframe then column_name must be specified.')
             df = data.copy()
+            raw_data = df[column_name].values.tolist()
         else:
-            df = DataFrame({'raw_data': data})
+            raw_data = list(data)
+            df = DataFrame(index=range(len(raw_data)))
             column_name = 'raw_data'
 
-        if df[column_name].apply(coordinate_utils.detect_geojson).all():
-            df[column_name] = df[column_name].apply(lambda feat: coordinate_utils.import_geojson(feat, self.precision))
+        if all(coordinate_utils.detect_geojson(v) for v in raw_data):
+            processed_data = [coordinate_utils.import_geojson(v, self.precision) for v in raw_data]
+        else:
+            processed_data = [coordinate_utils.process_input_value(v) for v in raw_data]
 
-        df['processed_data'] = df[column_name].apply(self._process_input_value)
-        x_coords, y_coords = zip(*df['processed_data'].tolist())
-        df['x_coords'] = list(x_coords)
-        df['y_coords'] = list(y_coords)
-        df = df.drop(['processed_data'], axis=1) 
-   
+        processed_data_transformed = [coordinate_utils.to_webmercator(v) for v in processed_data]
+        buf = 1 / (10 ** self.precision)
+
+        # original projection
+        x_coords_shape, y_coords_shape = zip(*[coordinate_utils.shape_to_nested_list(v, buf) for v in processed_data])
+        df['x_coords'], df['y_coords'] = list(x_coords_shape), list(y_coords_shape)
+
+        x_coords_point, y_coords_point = zip(*[list(*v.representative_point().coords) for v in processed_data])
+        df['x_coord_point'] = [round(v, self.precision) for v in x_coords_point]
+        df['y_coord_point'] = [round(v, self.precision) for v in y_coords_point]
+
+        # webmercator projection
+        x_coords_shape, y_coords_shape = zip(*[
+            coordinate_utils.shape_to_nested_list(v, buf) for v in processed_data_transformed
+        ])
+        df['x_coords_transform'], df['y_coords_transform'] = list(x_coords_shape), list(y_coords_shape)
+
+        x_coords_point, y_coords_point = zip(*[
+            list(*v.representative_point().coords) for v in processed_data_transformed
+        ])
+        df['x_coord_point_transform'] = [round(v, self.precision) for v in x_coords_point]
+        df['y_coord_point_transform'] = [round(v, self.precision) for v in y_coords_point]
+
         if len(kwargs) > 0:
             for k, v in kwargs.items():
                 df[k] = v
 
-        df['x_coords_transform'] = coordinate_utils.coord_to_webmercator(
-            df['x_coords'], precision=self.precision, longitude=True
-        )
-        df['y_coords_transform'] = coordinate_utils.coord_to_webmercator(
-            df['y_coords'], precision=self.precision, longitude=False
-        )
-        
-        df['x_coord_point'] = [
-            npround(mean(d['exterior']), self.precision)
-            for x in df['x_coords'] for d in x
-        ]
-        df['y_coord_point'] = [
-            npround(mean(d['exterior']), self.precision)
-            for x in df['y_coords'] for d in x
-        ]
-        df['x_coord_point_transform'] = [
-            npround(mean(d['exterior']), self.precision)
-            for x in df['x_coords_transform'] for d in x
-        ]
-        df['y_coord_point_transform'] = [
-            npround(mean(d['exterior']), self.precision)
-            for x in df['y_coords_transform'] for d in x
-        ]
-        
         self._set_coordinate_bounds(df)
 
-        df[column_name] = df[column_name].apply(
-            lambda ob: dumps(ob) if coordinate_utils.validate_shapelyobject(ob) else ob
-        )
+        df[column_name] = [coordinate_utils.dumps_if_shapely(ob) for ob in raw_data]
 
         if uid is None:
             df['uid'] = range(df.shape[0])
@@ -311,7 +293,7 @@ class Theto(object):
             df['uid'] = uid
             
         self.sources[label] = df.copy()
-        self.remove_columns[label] = ['f', 'e', 'p']
+        self.remove_columns[label] = ['f', 'p']
         self.validation['add_source'] = True
         
         return self
@@ -397,18 +379,9 @@ class Theto(object):
         x_point_label = 'x_coord_point{}'.format(suffix)
         y_point_label = 'y_coord_point{}'.format(suffix)
 
-        xsf = [
-            [[p['exterior'], *p['holes']] for p in mp] 
-            for mp in source_df[x_coords_label].tolist()
-        ]
-        ysf = [
-            [[p['exterior'], *p['holes']] for p in mp] 
-            for mp in source_df[y_coords_label].tolist()
-        ]
-        
-        xse = [x[0][0] for x in xsf]
-        yse = [x[0][0] for x in ysf]
-        
+        xsf = source_df[x_coords_label].tolist()
+        ysf = source_df[y_coords_label].tolist()
+
         xsp = source_df[x_point_label].tolist()
         ysp = source_df[y_point_label].tolist()
         
@@ -416,8 +389,6 @@ class Theto(object):
         source = ColumnDataSource(source_df.drop(omit, axis=1).to_dict('list'))
         source.data['xsf'] = xsf
         source.data['ysf'] = ysf
-        source.data['xse'] = xse
-        source.data['yse'] = yse
         source.data['xsp'] = xsp
         source.data['ysp'] = ysp
         
@@ -482,27 +453,28 @@ class Theto(object):
             )
             self.plot.api_key = self.api_key
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
-        elif get_tile_source(map_type) is not None:
+        elif bokeh_utils.get_tile_source(map_type) is not None:
+            x_rng, y_rng = self.xmax - self.xmin, self.ymax - self.ymin
             x_range = Range1d(
                 start=coordinate_utils.coord_to_webmercator(
-                    self.xmin - 0.001, 
+                    self.xmin - (x_rng * self.padding),
                     precision=self.precision, 
                     longitude=True
                 ), 
                 end=coordinate_utils.coord_to_webmercator(
-                    self.xmax + 0.001, 
+                    self.xmax + (x_rng * self.padding),
                     precision=self.precision,
                     longitude=True
                 )
             )
             y_range = Range1d(
                 start=coordinate_utils.coord_to_webmercator(
-                    self.ymin - 0.001, 
+                    self.ymin - (y_rng * self.padding),
                     precision=self.precision,
                     longitude=False
                 ), 
                 end=coordinate_utils.coord_to_webmercator(
-                    self.ymax + 0.001, 
+                    self.ymax + (y_rng * self.padding),
                     precision=self.precision,
                     longitude=False
                 )
@@ -516,7 +488,7 @@ class Theto(object):
                 **kwargs
             )
             
-            self.plot.add_tile(get_tile_source(map_type))
+            self.plot.add_tile(bokeh_utils.get_tile_source(map_type))
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
         else:
             raise ValueError('Invalid map_type.')
@@ -599,24 +571,12 @@ class Theto(object):
         if bokeh_model == bokeh_utils.MODELS['MultiPolygons']:
             if type(self.plot) == GMapPlot:
                 raise ValueError(
-                    '\n'.join(
-                        [
-                            'The `MultiPolygon` glyph cannot yet be used with a Google Maps plot.',
-                            'Use `Patches` instead.'
-                        ]
+                        'The `MultiPolygon` glyph cannot yet be used with a Google Maps plot.'
                     )
-                )  
             model_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
 
             if 'f' in self.remove_columns[source_label]:
                 _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('f'))
-
-        elif bokeh_model == bokeh_utils.MODELS['Patches']:
-
-            model_object = bokeh_model(xs='xse', ys='yse', name=source_label, **kwargs)
-
-            if 'e' in self.remove_columns[source_label]:
-                _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('e'))
 
         else:
 
@@ -784,7 +744,9 @@ class Theto(object):
         if len(self.legend.items) > 0:
             self.legend.orientation = legend_orientation
             self.plot.add_layout(self.legend, legend_position)
-        
+
+        self.plot.toolbar.autohide = self.autohide
+
         if len(self.widgets) > 0:
             widget_list = [d['widget'] for d in self.widgets.values()]
                         
@@ -799,7 +761,6 @@ class Theto(object):
             if widget_position == 'below':
                 self.plot = Column(children=[self.plot, WidgetBox(children=widget_list)])
 
-        self.plot.toolbar.autohide = self.autohide
         self.validation['render_plot'] = True
         
         if display_type == 'notebook':
