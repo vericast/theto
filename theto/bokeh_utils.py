@@ -1,36 +1,49 @@
 from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider, Dropdown, RadioButtonGroup
-from bokeh.tile_providers import get_provider, Vendors
 from bokeh.models import markers, WMTSTileSource
 from bokeh.models.glyphs import MultiPolygons, Text
 
 from .color_utils import assign_colors, check_color
 
 # non-Google-Map map tile sources
-ESRI_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
-OSMBW_URL = 'https://tiles.wmflabs.org/bw-mapnik/${z}/${x}/${y}.png'
-OSM_URL = 'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-WIKI_URL = 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}@2x.png'
-STAMENTONER_URL = get_provider(Vendors.STAMEN_TONER).url.replace('http://', 'https://')
-STAMENTERRAIN_URL = get_provider(Vendors.STAMEN_TERRAIN_RETINA).url.replace('http://', 'https://')
-CARTODB_URL = get_provider(Vendors.CARTODBPOSITRON_RETINA).url.replace('http://', 'https://')
+# adapted from https://github.com/holoviz/holoviews/blob/master/holoviews/element/tiles.py
 
 
 def get_tile_source(name):
-
     tiles = {
-        'osmb&w': WMTSTileSource(url=OSMBW_URL),
-        'osm': WMTSTileSource(url=OSM_URL),
-        'esri': WMTSTileSource(url=ESRI_URL),
-        'wikipedia': WMTSTileSource(url=WIKI_URL),
-        'stamentoner': WMTSTileSource(url=STAMENTONER_URL),
-        'stamenterrain': WMTSTileSource(url=STAMENTERRAIN_URL),
-        'cartodb': WMTSTileSource(url=CARTODB_URL)
+        # CartoDB basemaps
+        'carto_dark': 'https://cartodb-basemaps-4.global.ssl.fastly.net/dark_all/{Z}/{X}/{Y}.png',
+        'carto_eco': 'https://3.api.cartocdn.com/base-eco/{Z}/{X}/{Y}.png',
+        'carto_light': 'https://cartodb-basemaps-4.global.ssl.fastly.net/light_all/{Z}/{X}/{Y}.png',
+        'carto_midnight': 'https://3.api.cartocdn.com/base-midnight/{Z}/{X}/{Y}.png',
+
+        # Stamen basemaps
+        'stamen_terrain': 'https://tile.stamen.com/terrain/{Z}/{X}/{Y}.png',
+        'stamen_terrain_retina':  'https://tile.stamen.com/terrain/{Z}/{X}/{Y}@2x.png',
+        'stame_watercolor': 'https://tile.stamen.com/watercolor/{Z}/{X}/{Y}.jpg',
+        'stamen_toner': 'https://tile.stamen.com/toner/{Z}/{X}/{Y}.png',
+        'stamen_toner_background': 'https://tile.stamen.com/toner-background/{Z}/{X}/{Y}.png',
+        'stamen_toner_labels':'https://tile.stamen.com/toner-labels/{Z}/{X}/{Y}.png',
+
+        # Esri maps (see https://server.arcgisonline.com/arcgis/rest/services for the full list)
+        'esri_imagery': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg',
+        'esri_natgeo': 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{Z}/{Y}/{X}',
+        'esri_usatopo': 'https://server.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{Z}/{Y}/{X}',
+        'esri_terrain': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{Z}/{Y}/{X}',
+        'esri_reference': 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{Z}/{Y}/{X}',
+
+        # Miscellaneous
+        'osm': 'https://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png',
+        'osm_bw': 'https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png',
+        'wikipedia': 'https://maps.wikimedia.org/osm-intl/{Z}/{X}/{Y}@2x.png'
     }
+
+    if name is None:
+        return list(tiles.keys())
 
     if name not in tiles:
         return None
 
-    return tiles[name]
+    return WMTSTileSource(url=tiles[name])
 
 
 # all supported models

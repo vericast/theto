@@ -395,7 +395,7 @@ class Theto(object):
         return source
     
     def prepare_plot(
-        self, plot_width=700, plot_height=None, zoom=None, map_type='cartodb',
+        self, plot_width=700, plot_height=None, zoom=None, map_type='carto_light',
         title=None, **kwargs
     ):
         """
@@ -453,7 +453,7 @@ class Theto(object):
             )
             self.plot.api_key = self.api_key
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
-        elif bokeh_utils.get_tile_source(map_type) is not None:
+        elif map_type in bokeh_utils.get_tile_source(None):
             x_rng, y_rng = self.xmax - self.xmin, self.ymax - self.ymin
             x_range = Range1d(
                 start=coordinate_utils.coord_to_webmercator(
