@@ -2,7 +2,7 @@ from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider
 from bokeh.models import markers, WMTSTileSource
 from bokeh.models.glyphs import MultiPolygons, Text
 
-from .color_utils import assign_colors, check_color
+from .color_utils import check_color, check_numeric, color_gradient, hls_palette, order_records
 
 # non-Google-Map map tile sources
 # adapted from https://github.com/holoviz/holoviews/blob/master/holoviews/element/tiles.py
@@ -214,7 +214,7 @@ def auto_widget_kwarg(widget_type, kwarg, reference_array):
 
     
 def prepare_properties(
-    bokeh_model, kwargs, source_df, categorical_palette=None,
+    bokeh_model, kwargs, source_df,
     start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None
 ):
     """
@@ -234,10 +234,10 @@ def prepare_properties(
     new_fields = dict()
     for key in color_keys:
         color_val = kwargs[key]
+
         if color_val is None:
             continue
-        if color_val is None:
-            continue
+
         if isinstance(color_val, str):
             if check_color(color_val):
                 continue
@@ -249,9 +249,24 @@ def prepare_properties(
             in_datasource = False
 
         if not all(check_color(c) for c in color_arr):
-            color_new = assign_colors(
-                color_arr, start_hex, end_hex, mid_hex, color_transform, categorical_palette
-            )
+
+            if check_numeric(color_arr):
+                if (start_hex is not None) and (end_hex is not None):
+                    color_new = color_gradient(
+                        color_arr,
+                        start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex,
+                        trans=color_transform
+                    )
+                else:
+                    raise ValueError('Values for `start_hex` and `end_hex` must be supplied for numeric arrays.')
+            else:
+                n_colors = len(set(color_arr))
+                color_df = source_df.groupby(color_arr)[['x_coord_point', 'y_coord_point']].mean()
+                score = order_records(color_df['x_coord_point'].tolist(), source_df['y_coord_point'].tolist())
+                palette = hls_palette(n_colors, h=0.5, l=0.5, s=1.0)
+                color_dict = dict(zip(color_df.index.tolist(), [palette[ind] for ind in score]))
+                color_new = [color_dict[ind] for ind in color_arr]
+
             if in_datasource:
                 new_val = '{}_autocolor'.format(color_val)
                 new_fields[new_val] = color_new

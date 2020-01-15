@@ -53,7 +53,7 @@ class Theto(object):
     )
     """
     
-    def __init__(self, api_key=None, categorical_palette=None, precision=6, autohide=True, padding=0.05):
+    def __init__(self, api_key=None, precision=6, autohide=True, padding=0.05):
         """
         Instantiate the class.
         
@@ -63,11 +63,7 @@ class Theto(object):
             developers.google.com/maps/documentation/javascript/get-api-key.
             If None, only non-Google tile providers ('osm', 'esri', 
             'wikipedia', 'cartodb') will be available.
-            
-        categorical_palette (list): a list of hex values stipulating what colors
-            to use to color catagorical variables. If None, the eight-value
-            colorblind palette from Bokeh will be used.
-            
+
         precision (int): The number of decimals places that are meaningful for
             the plot. Defaults to 6, which is about as precise as phone's
             GPS signal can be expected to be. This precision will get automatically
@@ -90,11 +86,6 @@ class Theto(object):
         self.precision = precision
         self.autohide = autohide
         self.padding = padding
-
-        if categorical_palette is None:
-            self.categorical_palette = color_utils.COLORBLIND_PALETTE
-        else:
-            self.categorical_palette = categorical_palette
 
         self.omit_columns = [
             'index', 'raw_data', 'x_coords', 'y_coords', 'x_coords_transform', 'y_coords_transform', 
@@ -559,8 +550,9 @@ class Theto(object):
             
         bokeh_model = bokeh_utils.MODELS[bokeh_model]
         kwargs, new_fields = bokeh_utils.prepare_properties(
-            bokeh_model, kwargs, self.sources[source_label], self.categorical_palette,
-            start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex, color_transform=color_transform, 
+            bokeh_model, kwargs, self.sources[source_label],
+            start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex,
+            color_transform=color_transform,
         )
                 
         source = self.columndatasources[source_label]

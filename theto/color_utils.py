@@ -1,6 +1,6 @@
 from bokeh.palettes import colorblind
 from bokeh.colors import named
-from numpy import array, repeat
+from numpy import array, repeat, argmax, linspace
 
 COLORBLIND_PALETTE = colorblind['Colorblind'][8]
 NAMED_COLORS = {color: getattr(named, color).to_hex() for color in named.__all__}
@@ -100,6 +100,89 @@ def color_gradient(vals, start_hex, end_hex, mid_hex='#ffffff', trans=None):
         ]
 
         return sarr_new
+
+
+def order_records(x_coords, y_coords):
+    n_records = len(x_coords)
+    record_inds = list(range(n_records))
+    a = array(list(zip(x_coords, y_coords)))
+
+    inds = array([True] * n_records)
+    current_ind = 0
+    ind_order = list()
+
+    while any(inds):
+        inds[current_ind] = False
+        ind_order.append(current_ind)
+        dists = ((a[current_ind, :] - a) ** 2).sum(axis=1) ** 0.5
+        dists[~inds] = -1
+        current_ind = argmax(dists)
+
+    order_dict = dict(zip([record_inds[ind] for ind in ind_order], record_inds))
+    score = [order_dict[ind] for ind in record_inds]
+    return score
+
+
+def _v(m1, m2, hue):
+    hue = hue % 1.0
+    if hue < (1 / 6):
+        return m1 + (m2 - m1) * hue * 6.0
+    if hue < 0.5:
+        return m2
+    if hue < (2 / 3):
+        return m1 + (m2 - m1) * ((2 / 3) - hue) * 6.0
+    return m1
+
+
+def hls_to_rgb(h, l, s):
+    """
+    Adapted from https://github.com/python/cpython/blob/master/Lib/colorsys.py
+    """
+    if s == 0.0:
+        return l, l, l
+    if l <= 0.5:
+        m2 = l * (1.0 + s)
+    else:
+        m2 = l + s - (l * s)
+    m1 = 2.0 * l - m2
+    r, g, b = _v(m1, m2, h + (1.0 / 3.0)), _v(m1, m2, h), _v(m1, m2, h - (1.0 / 3.0))
+    return int(r * 255.0), int(g * 255.0), int(b * 255.0)
+
+
+def rgb_to_hex_sep(r, g, b):
+    return "#{0:02x}{1:02x}{2:02x}".format(r, g, b)
+
+
+def hls_palette(n_colors=6, h=.01, l=.6, s=.65):
+    """
+    Get a set of evenly spaced colors in HLS hue space.
+    h, l, and s should be between 0 and 1
+
+    Adapted from https://github.com/mwaskom/seaborn/blob/master/seaborn/palettes.py
+
+    Parameters
+    ----------
+    n_colors : int
+        number of colors in the palette
+    h : float
+        first hue
+    l : float
+        lightness
+    s : float
+        saturation
+
+    Returns
+    -------
+    palette : List-like object of colors as hex color strings.
+
+    """
+
+    hues = linspace(0, 1, int(n_colors) + 1)[:-1]
+    hues += h
+    hues %= 1
+    hues -= hues.astype(int)
+    palette = [rgb_to_hex_sep(*hls_to_rgb(h_i, l, s)) for h_i in hues]
+    return palette
 
 
 def assign_colors(color_arr, start=None, end=None, mid='#ffffff', trans=None, categorical_palette=None):
