@@ -87,9 +87,10 @@ class Theto(object):
         self.autohide = autohide
         self.padding = padding
 
+        # removed 'x_coord_point', 'y_coord_point', 'raw_data'
         self.omit_columns = [
-            'index', 'raw_data', 'x_coords', 'y_coords', 'x_coords_transform', 'y_coords_transform', 
-            'x_coord_point', 'y_coord_point', 'x_coord_point_transform', 'y_coord_point_transform'
+            'index', 'x_coords', 'y_coords', 'x_coords_transform', 'y_coords_transform',
+             'x_coord_point_transform', 'y_coord_point_transform'
         ]
 
         self.sources = dict()
@@ -424,7 +425,8 @@ class Theto(object):
             if isinstance(title, str):
                 title = Title(text=title)
             if isinstance(title, (list, tuple)):
-                title = Title(text=title[0], **title[-1])
+                title, title_kwargs = title
+                title = Title(text=title, **title_kwargs)
                 
         if map_type in ('satellite', 'roadmap', 'terrain', 'hybrid'):
             if self.api_key is None:
@@ -587,6 +589,29 @@ class Theto(object):
             self.legend.items.append(li)
     
         if tooltips is not None:
+            if tooltips == 'all':
+                tooltips = [
+                    (k, '@{}'.format(k)) for k in source.data.keys()
+                    if k not in ('xsf', 'ysf', 'xsp', 'ysp')
+                ]
+            elif tooltips == 'point':
+                tooltips = [
+                    (k, '@{}'.format(k)) for k in source.data.keys()
+                    if k not in ('xsf', 'ysf', 'xsp', 'ysp', 'raw_data')
+                ]
+            elif tooltips == 'raw_data':
+                tooltips = [
+                    (k, '@{}'.format(k)) for k in source.data.keys()
+                    if k not in ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point')
+                ]
+            elif tooltips == 'meta':
+                tooltips = [
+                    (k, '@{}'.format(k)) for k in source.data.keys()
+                    if k not in ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
+                ]
+            elif isinstance(tooltips, str):
+                raise NotImplementedError("Tooltips must be list of tuples, or 'all', 'point', 'raw_data', or 'meta'")
+
             self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
             
         self.validation['add_layer'] = True
