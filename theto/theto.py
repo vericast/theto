@@ -309,6 +309,13 @@ class Theto(object):
         """
 
         self._validate_workflow('add_widget')
+
+        if widget_type == 'Animation':
+            widget_type = 'Slider'
+            animate = True
+        else:
+            animate = False
+
         if widget_name is None:
             widget_name = widget_type
         
@@ -318,6 +325,18 @@ class Theto(object):
         source = self.sources[source_label]
         
         ref_array = source[reference].tolist()
+
+        animation_kwargs = {'button_type': 'primary', 'label': 'Start', 'ms_delay': 500}
+        remove_kw = list()
+
+        for k, v in kwargs.items():
+            if k.startswith('animation'):
+                remove_kw.append(k)
+                k = k.replace('animation_', '')
+                animation_kwargs[k] = v
+
+        for k in remove_kw:
+            _ = kwargs.pop(k)
 
         for k, v in bokeh_utils.DEFAULT_KWARGS[widget_type].items():
             if k not in kwargs:
@@ -354,9 +373,15 @@ class Theto(object):
                 
             js_filter = self.custom_js
             js_filter.args.update({widget_name: widget, widget_name + '_ref': reference})
-        
+
         self.widgets[widget_name] = {'widget': widget, 'filter': js_filter, 'source': source_label}
-            
+
+        if animate:
+            ms_delay = animation_kwargs.pop('ms_delay')
+            button = bokeh_utils.Button(**animation_kwargs)
+            button.js_on_event(bokeh_utils.ButtonClick, bokeh_utils.auto_advance(widget, ms_delay))
+            self.widgets['animation'] = {'widget': button, 'filter': None, 'source': None}
+
         if source_label not in self.views:
             self.views[source_label] = CDSView(filters=[js_filter])
             
@@ -771,8 +796,23 @@ class Theto(object):
         self.plot.toolbar.autohide = self.autohide
 
         if len(self.widgets) > 0:
+
+            if 'animation' in self.widgets.keys():
+                animate = True
+                button = self.widgets.pop('animation')
+                button = button['widget']
+            else:
+                animate = False
+
             widget_list = [d['widget'] for d in self.widgets.values()]
-                        
+
+            if animate:
+                if (len(widget_list) > 1) or not isinstance(widget_list[0], bokeh_utils.Slider):
+                    raise NotImplementedError(
+                        'Animations are currently only implented for plots that have only a Slider widget.'
+                    )
+                widget_list = [button] + widget_list
+
             if widget_position not in ('left', 'right', 'above', 'below'):
                 raise ValueError("Valid widget positions are 'left', 'right', 'above', 'below'.")
             if widget_position == 'left':

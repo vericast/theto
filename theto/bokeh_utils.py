@@ -1,4 +1,6 @@
-from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider, Dropdown, RadioButtonGroup
+from bokeh.models import CheckboxGroup, CheckboxButtonGroup, RangeSlider, Slider, Dropdown, RadioButtonGroup, Button
+from bokeh.models import CustomJS
+from bokeh.events import ButtonClick
 from bokeh.models import markers, WMTSTileSource
 from bokeh.models.glyphs import MultiPolygons, Text
 
@@ -199,7 +201,29 @@ FILTERS = {
     '''
 }
 
-    
+
+def auto_advance(slider, ms_delay=500):
+    return CustomJS(args=dict(slider=slider), code="""
+
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            async function autoAdvance() {
+
+                slider.value = slider.start;
+
+                while (slider.value < slider.end) {
+                    await sleep(%d)
+                    slider.value = slider.value + slider.step
+                };
+            }
+
+            autoAdvance();
+        """ % ms_delay
+                    )
+
+
 def auto_widget_kwarg(widget_type, kwarg, reference_array):
     """
     For a particular widget type, keyword argument, and array
