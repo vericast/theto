@@ -63,6 +63,51 @@ WIDGETS = {
     'RadioButtonGroup': RadioButtonGroup
 }
 
+DEFAULT_KWARGS = {
+    'CheckboxGroup': {
+        'labels': 'auto',
+        'active': 'auto',
+        'width': 90
+    },
+    'RangeSlider': {
+        'start': 'auto',
+        'end': 'auto',
+        'step': 1,
+        'value':'auto',
+        'width': 50,
+        'show_value': True,
+        'orientation':
+        'vertical',
+        'tooltips': False,
+        'format':'0'
+    },
+    'Dropdown': {
+        'menu': 'auto',
+        'value':'auto',
+        'width': 100,
+        'label': 'geohashes'
+    },
+    'Slider': {
+        'start': 'auto',
+        'end': 'auto',
+        'step': 1,
+        'value':'auto',
+        'width': 50,
+        'show_value': True,
+        'orientation': 'vertical',
+        'tooltips': False,
+        'format':'0'
+    },
+    'CheckboxButtonGroup': {
+        'labels': 'auto',
+        'active': 'auto'
+    },
+    'RadioButtonGroup': {
+        'labels': 'auto',
+        'active': 'auto'
+    }
+}
+
 # filter boilerplate
 FILTERS = {
     'Dropdown': '''

@@ -290,7 +290,7 @@ class Theto(object):
         
         return self
 
-    def add_widget(self, source_label, widget_type, widget_name, reference, custom_js=None, **kwargs):
+    def add_widget(self, source_label, widget_type, reference, widget_name=None, custom_js=None, **kwargs):
         """
         Add widgets to subset the data displayed in the plot.
         
@@ -309,6 +309,8 @@ class Theto(object):
         """
 
         self._validate_workflow('add_widget')
+        if widget_name is None:
+            widget_name = widget_type
         
         if reference not in self.sources[source_label].columns:
             raise ValueError("Reference '{}' not in data source '{}'.".format(reference, source_label))
@@ -316,6 +318,10 @@ class Theto(object):
         source = self.sources[source_label]
         
         ref_array = source[reference].tolist()
+
+        for k, v in bokeh_utils.DEFAULT_KWARGS[widget_type].items():
+            if k not in kwargs:
+                kwargs[k] = v
 
         widget = bokeh_utils.WIDGETS[widget_type](name=widget_name, **{
             k: v if v != 'auto' else bokeh_utils.auto_widget_kwarg(widget_type, k, ref_array)
