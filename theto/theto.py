@@ -1,11 +1,12 @@
 from bokeh.io import output_notebook, show, save
 from bokeh.models.glyphs import Quadratic, Segment
 from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot
-from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool
+from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool, TapTool
 from bokeh.models.annotations import Title, Legend, LegendItem
 from bokeh.resources import CDN
 from bokeh.layouts import Row, Column, WidgetBox
 from bokeh.models import CustomJS, CustomJSFilter, CDSView
+from bokeh.models.callbacks import OpenURL
 
 from os import path
 from pandas import DataFrame
@@ -538,7 +539,7 @@ class Theto(object):
         return self
         
     def add_layer(
-        self, source_label, bokeh_model='MultiPolygons', tooltips=None, legend=None, 
+        self, source_label, bokeh_model='MultiPolygons', tooltips=None, legend=None, click_for_map=None,
         start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None, 
         **kwargs
     ):
@@ -644,7 +645,20 @@ class Theto(object):
                 raise NotImplementedError("Tooltips must be list of tuples, or 'all', 'point', 'raw_data', or 'meta'")
 
             self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
-            
+
+        if click_for_map is not None:
+            taptool = TapTool()
+            if click_for_map == 'google':
+                url = 'https://maps.google.com/maps?q=@y_coord_point,@x_coord_point'
+                taptool.callback = OpenURL(url=url)
+            elif click_for_map == 'bing':
+                url = 'https://bing.com/maps/default.aspx?sp=point.@{y_coord_point}_@{x_coord_point}_Selected point&style=r'
+                taptool.callback = OpenURL(url=url)
+            else:
+                raise NotImplementedError('Value for `click_for_map` must be "bing", "google" or None.')
+
+            self.plot.add_tools(taptool)
+
         self.validation['add_layer'] = True
         
         return self
