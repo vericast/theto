@@ -1,6 +1,6 @@
 from bokeh.io import output_notebook, show, save
 from bokeh.models.glyphs import Quadratic, Segment
-from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot
+from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot, Rect
 from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool, TapTool
 from bokeh.models.annotations import Title, Legend, LegendItem
 from bokeh.resources import CDN
@@ -88,6 +88,7 @@ class Theto(object):
         self.precision = precision
         self.autohide = autohide
         self.padding = padding
+        self.colorbar = None
 
         # removed 'x_coord_point', 'y_coord_point', 'raw_data'
         self.omit_columns = [
@@ -508,8 +509,8 @@ class Theto(object):
             self.plot = Plot(
                 x_range=x_range,
                 y_range=y_range,
-                plot_width=plot_width,
-                plot_height=plot_height,
+                frame_width=plot_width,
+                frame_height=plot_height,
                 title=title,
                 **kwargs
             )
@@ -558,7 +559,7 @@ class Theto(object):
         
     def add_layer(
         self, source_label, bokeh_model='MultiPolygons', tooltips=None, legend=None, click_for_map=None,
-        start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None, 
+        start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None,
         **kwargs
     ):
         """
@@ -601,11 +602,14 @@ class Theto(object):
             )
             
         bokeh_model = bokeh_utils.MODELS[bokeh_model]
-        kwargs, new_fields = bokeh_utils.prepare_properties(
-            bokeh_model, kwargs, self.sources[source_label],
+        kwargs, new_fields, colorbar = bokeh_utils.prepare_properties(
+            bokeh_model, kwargs, self.sources[source_label], bar_height=self.plot.frame_height,
             start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex,
             color_transform=color_transform,
         )
+
+        if self.colorbar is None:
+            self.colorbar = colorbar
                 
         source = self.columndatasources[source_label]
         
@@ -824,6 +828,9 @@ class Theto(object):
             self.plot.add_layout(self.legend, legend_position)
 
         self.plot.toolbar.autohide = self.autohide
+
+        if self.colorbar is not None:
+            self.plot = Row(children=[self.plot, self.colorbar])
 
         if len(self.widgets) > 0:
 

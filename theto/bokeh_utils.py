@@ -3,6 +3,7 @@ from bokeh.models import CustomJS
 from bokeh.events import ButtonClick
 from bokeh.models import markers, WMTSTileSource
 from bokeh.models.glyphs import MultiPolygons, Text
+from bokeh.models import Plot, Rect, ColumnDataSource
 
 from .color_utils import check_color, check_numeric, color_gradient, hls_palette, order_records
 
@@ -283,7 +284,7 @@ def auto_widget_kwarg(widget_type, kwarg, reference_array):
 
     
 def prepare_properties(
-    bokeh_model, kwargs, source_df,
+    bokeh_model, kwargs, source_df, bar_height,
     start_hex='#ff0000', end_hex='#0000ff', mid_hex='#ffffff', color_transform=None
 ):
     """
@@ -291,7 +292,9 @@ def prepare_properties(
     automatically set color and alpha values.
     
     """
-        
+
+    colorbar = None
+
     if 'color' in kwargs.keys():
         color = kwargs.pop('color')
         for v in bokeh_model.dataspecs():
@@ -326,6 +329,8 @@ def prepare_properties(
                         start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex,
                         trans=color_transform
                     )
+
+                    colorbar = make_colorbar(color_arr, color_new, bar_height)
                 else:
                     raise ValueError('Values for `start_hex` and `end_hex` must be supplied for numeric arrays.')
             else:
@@ -349,4 +354,34 @@ def prepare_properties(
             if 'alpha' in v:
                 kwargs[v] = alpha
                     
-    return kwargs, new_fields
+    return kwargs, new_fields, colorbar
+
+
+def make_colorbar(values, colors, bar_height):
+    val_list = list()
+    seen = set()
+    for val, color in zip(values, colors):
+        if color not in seen:
+            val_list.append((val, color))
+            seen.add(color)
+
+    val_opts, color_opts = zip(*sorted(val_list))
+    n_opts = len(val_opts)
+    longest_val = len(max([str(v) for v in val_opts], key=len))
+    opt_inds = [v for v in range(n_opts)]
+    max_color, max_val, max_ind = color_opts[0], val_opts[0], opt_inds[0]
+    min_color, min_val, min_ind = color_opts[-1], val_opts[-1], opt_inds[-1]
+
+    colorbar = Plot(
+        frame_width=10 * longest_val, frame_height=bar_height,
+        title=None, min_border=0,
+        toolbar_location=None, outline_line_color=None
+    )
+    colorbar_source = ColumnDataSource({'x': [0] * n_opts, 'y': opt_inds, 'vals': val_opts, 'colors': color_opts})
+    glyph = Rect(x=1, y="y", width=1, height=1, fill_color="colors", line_color=None)
+    text_source = ColumnDataSource({'x': [1, 1], 'y': [min_ind + 1, max_ind - 1], 'text': [str(min_val), str(max_val)]})
+    text = Text(x=1, y='y', text='text', text_font_size='10pt', text_align='center', text_baseline='middle')
+    colorbar.add_glyph(colorbar_source, glyph)
+    colorbar.add_glyph(text_source, text)
+
+    return colorbar
