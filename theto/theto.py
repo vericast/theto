@@ -659,8 +659,6 @@ class Theto(object):
                     (k, '@{}'.format(k)) for k in source.data.keys()
                     if k not in ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
                 ]
-            elif isinstance(tooltips, str):
-                raise NotImplementedError("Tooltips must be list of tuples, or 'all', 'point', 'raw_data', or 'meta'")
 
             self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
 
