@@ -7,6 +7,7 @@ from bokeh.resources import CDN
 from bokeh.layouts import Row, Column, WidgetBox
 from bokeh.models import CustomJS, CustomJSFilter, CDSView
 from bokeh.models.callbacks import OpenURL
+from bokeh.models import LinearAxis, MercatorTicker, MercatorTickFormatter
 
 from os import path
 from pandas import DataFrame
@@ -515,6 +516,23 @@ class Theto(object):
             
             self.plot.add_tile(bokeh_utils.get_tile_source(map_type))
             self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
+
+            xformatter = MercatorTickFormatter(dimension="lon")
+            xticker = MercatorTicker(dimension="lon")
+            xaxis = LinearAxis(
+                formatter=xformatter, ticker=xticker,
+                axis_line_alpha=0.1, minor_tick_line_alpha=0.1, major_tick_line_alpha=0.1, major_label_text_alpha=0.5
+            )
+            self.plot.add_layout(xaxis, 'below')
+
+            yformatter = MercatorTickFormatter(dimension="lat")
+            yticker = MercatorTicker(dimension="lat")
+            yaxis = LinearAxis(
+                formatter=yformatter, ticker=yticker,
+                axis_line_alpha=0.1, minor_tick_line_alpha=0.1, major_tick_line_alpha=0.1, major_label_text_alpha=0.5
+            )
+            self.plot.add_layout(yaxis, 'left')
+
         else:
             raise ValueError('Invalid map_type.')
                     
