@@ -5,8 +5,8 @@ from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool, Tap
 from bokeh.models.annotations import Title, Legend, LegendItem
 from bokeh.resources import CDN
 from bokeh.layouts import Row, Column, WidgetBox
-from bokeh.models import CustomJS, CustomJSFilter, CDSView
-from bokeh.models.callbacks import OpenURL
+from bokeh.models import CustomJS, CustomJSFilter, CDSView, OpenURL
+from bokeh.models import DataTable, TableColumn
 from bokeh.models import LinearAxis, MercatorTicker, MercatorTickFormatter
 
 from os import path
@@ -100,6 +100,7 @@ class Theto(object):
         self.columndatasources = dict()
         self.views = dict()
         self.widgets = dict()
+        self.data_tables = list()
         self.custom_js = None
         self.xmin = None
         self.ymin = None
@@ -171,6 +172,13 @@ class Theto(object):
                 raise WorkflowOrderError('Method `render_plot` has already been called. Start new workflow.')
             if self.validation['add_widget']:
                 raise WorkflowOrderError('Plot contains widgets, which are not compatible with paths.')
+        if stage == 'add_data_table':
+            if not self.validation['add_source']:
+                raise WorkflowOrderError('Method `add_source` must be called before adding a data table.')
+            if not self.validation['prepare_plot']:
+                raise WorkflowOrderError('Method `prepare_plot` must be called before adding a data table.')
+            if self.validation['render_plot']:
+                raise WorkflowOrderError('Method `render_plot` has already been called. Start new workflow.')
 
     def _set_coordinate_bounds(self, df):
         """
@@ -479,7 +487,7 @@ class Theto(object):
                 **kwargs
             )
             self.plot.api_key = self.api_key
-            self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
+            self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool(), TapTool())
         elif map_type in bokeh_utils.get_tile_source(None):
             x_rng, y_rng = self.xmax - self.xmin, self.ymax - self.ymin
             x_range = Range1d(
@@ -516,7 +524,7 @@ class Theto(object):
             )
             
             self.plot.add_tile(bokeh_utils.get_tile_source(map_type))
-            self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool())
+            self.plot.add_tools(WheelZoomTool(), ResetTool(), PanTool(), TapTool())
 
             xformatter = MercatorTickFormatter(dimension="lon")
             xticker = MercatorTicker(dimension="lon")
@@ -602,7 +610,7 @@ class Theto(object):
             )
             
         bokeh_model = bokeh_utils.MODELS[bokeh_model]
-        kwargs, new_fields, colorbar = bokeh_utils.prepare_properties(
+        kwargs, hover_kwargs, new_fields, colorbar = bokeh_utils.prepare_properties(
             bokeh_model, kwargs, self.sources[source_label], bar_height=self.plot.frame_height,
             start_hex=start_hex, end_hex=end_hex, mid_hex=mid_hex,
             color_transform=color_transform,
@@ -612,7 +620,7 @@ class Theto(object):
             self.colorbar = colorbar
                 
         source = self.columndatasources[source_label]
-        
+
         for k, v in new_fields.items():
             self.columndatasources[source_label].data[k] = v
 
@@ -623,6 +631,11 @@ class Theto(object):
                     )
             model_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
 
+            if len(hover_kwargs) > 0:
+                for k, v in hover_kwargs.items():
+                    kwargs[k] = v
+                hover_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
+
             if 'f' in self.remove_columns[source_label]:
                 _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('f'))
 
@@ -630,13 +643,24 @@ class Theto(object):
 
             model_object = bokeh_model(x='xsp', y='ysp', name=source_label, **kwargs)
 
+            if len(hover_kwargs) > 0:
+                for k, v in hover_kwargs:
+                    kwargs[k] = v
+                hover_object = bokeh_model(xs='xsf', ys='ysf', name=source_label, **kwargs)
+
             if 'p' in self.remove_columns[source_label]:
                 _ = self.remove_columns[source_label].pop(self.remove_columns[source_label].index('p'))
 
         if source_label in self.views:
-            rend = self.plot.add_glyph(source, model_object, view=self.views[source_label])
+            if len(hover_kwargs) > 0:
+                rend = self.plot.add_glyph(source, model_object, hover_glyph=hover_object, view=self.views[source_label])
+            else:
+                rend = self.plot.add_glyph(source, model_object, view=self.views[source_label])
         else:
-            rend = self.plot.add_glyph(source, model_object)
+            if len(hover_kwargs) > 0:
+                rend = self.plot.add_glyph(source, model_object, hover_glyph=hover_object)
+            else:
+                rend = self.plot.add_glyph(source, model_object)
 
         if legend is not None:
             li = LegendItem(label=legend, renderers=[rend])
@@ -664,10 +688,10 @@ class Theto(object):
                     if k not in ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
                 ]
 
-            self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
+        self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
 
         if click_for_map is not None:
-            taptool = TapTool()
+            taptool = self.plot.select(type=TapTool)
             if click_for_map == 'google':
                 url = 'https://maps.google.com/maps?q=@y_coord_point,@x_coord_point'
                 taptool.callback = OpenURL(url=url)
@@ -676,8 +700,6 @@ class Theto(object):
                 taptool.callback = OpenURL(url=url)
             else:
                 raise NotImplementedError('Value for `click_for_map` must be "bing", "google" or None.')
-
-            self.plot.add_tools(taptool)
 
         self.validation['add_layer'] = True
         
@@ -793,6 +815,31 @@ class Theto(object):
             self.plot.add_tools(HoverTool(tooltips=tooltips, renderers=[rend]))
             
         return self
+
+    def add_data_table(self, source_label, columns='all'):
+
+        self._validate_workflow('add_data_table')
+
+        source = self.columndatasources[source_label]
+
+        if columns == 'all':
+            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp')
+        elif columns == 'point':
+            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'raw_data')
+        elif columns == 'raw_data':
+            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point')
+        elif columns == 'meta':
+            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
+
+        data_table = DataTable(
+            source=source, columns=[TableColumn(field=k, title=k) for k in source.data.keys() if k not in omit_cols],
+            editable=False, width=self.plot.plot_width, index_position=None, reorderable=True, scroll_to_selection=True,
+            selectable='checkbox', sortable=True
+        )
+
+        self.data_tables.append(data_table)
+
+        return self
             
     def render_plot(
         self, display_type='object', directory=None, legend_position='below', 
@@ -860,6 +907,9 @@ class Theto(object):
                 self.plot = Column(children=[WidgetBox(children=widget_list), self.plot])
             if widget_position == 'below':
                 self.plot = Column(children=[self.plot, WidgetBox(children=widget_list)])
+
+        if len(self.data_tables) > 0:
+            self.plot = Column(children=[self.plot] + self.data_tables)
 
         self.validation['render_plot'] = True
         

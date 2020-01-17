@@ -295,6 +295,14 @@ def prepare_properties(
 
     colorbar = None
 
+    hover_kwargs = dict()
+    for k, v in kwargs.items():
+        if k.startswith('hover_'):
+            hover_kwargs[k.replace('hover_', '')] = v
+
+    for k in hover_kwargs.keys():
+        _ = kwargs.pop('hover_' + k)
+
     if 'color' in kwargs.keys():
         color = kwargs.pop('color')
         for v in bokeh_model.dataspecs():
@@ -354,7 +362,7 @@ def prepare_properties(
             if 'alpha' in v:
                 kwargs[v] = alpha
                     
-    return kwargs, new_fields, colorbar
+    return kwargs, hover_kwargs, new_fields, colorbar
 
 
 def make_colorbar(values, colors, bar_height):
