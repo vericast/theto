@@ -816,25 +816,52 @@ class Theto(object):
             
         return self
 
-    def add_data_table(self, source_label, columns='all'):
+    def add_data_table(self, source_label, columns='all', **kwargs):
 
         self._validate_workflow('add_data_table')
 
         source = self.columndatasources[source_label]
 
-        if columns == 'all':
-            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp')
-        elif columns == 'point':
-            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'raw_data')
-        elif columns == 'raw_data':
-            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point')
-        elif columns == 'meta':
-            omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
+        if isinstance(columns, (list, tuple)):
+            columns = {
+                k: max([len(str(val)) for val in v] + [len(k)]) for k, v in source.data.items()
+                if k in columns
+            }
+        else:
+            if columns == 'all':
+                omit_cols = ('xsf', 'ysf', 'xsp', 'ysp')
+            elif columns == 'point':
+                omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'raw_data')
+            elif columns == 'raw_data':
+                omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point')
+            elif columns == 'meta':
+                omit_cols = ('xsf', 'ysf', 'xsp', 'ysp', 'x_coord_point', 'y_coord_point', 'raw_data')
+            else:
+                omit_cols = list()
+
+            columns = {
+                k: max([len(str(val)) for val in v] + [len(k)]) for k, v in source.data.items()
+                if k not in omit_cols
+            }
+
+        default_kw = {
+            'editable': False,
+            'index_position': None,
+            'reorderable': True,
+            'scroll_to_selection': True,
+            'selectable': 'checkbox',
+            'sortable': True,
+            'fit_columns': False
+        }
+
+        for k, v in default_kw.items():
+            if k not in kwargs.keys():
+                kwargs[k] = v
 
         data_table = DataTable(
-            source=source, columns=[TableColumn(field=k, title=k) for k in source.data.keys() if k not in omit_cols],
-            editable=False, width=self.plot.plot_width, index_position=None, reorderable=True, scroll_to_selection=True,
-            selectable='checkbox', sortable=True
+            source=source,
+            columns=[TableColumn(field=k, title=k, width=v * 8) for k, v in columns.items()],
+            **kwargs
         )
 
         self.data_tables.append(data_table)
