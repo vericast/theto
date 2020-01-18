@@ -1,10 +1,10 @@
 from bokeh.io import output_notebook, show, save
 from bokeh.models.glyphs import Quadratic, Segment
-from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot, Rect
+from bokeh.models import GMapPlot, GMapOptions, ColumnDataSource, Range1d, Plot
 from bokeh.models.tools import HoverTool, WheelZoomTool, ResetTool, PanTool, TapTool
 from bokeh.models.annotations import Title, Legend, LegendItem
 from bokeh.resources import CDN
-from bokeh.layouts import Row, Column, WidgetBox
+from bokeh.models.layouts import Row, Column, WidgetBox
 from bokeh.models import CustomJS, CustomJSFilter, CDSView, OpenURL
 from bokeh.models import DataTable, TableColumn
 from bokeh.models import LinearAxis, MercatorTicker, MercatorTickFormatter
@@ -13,7 +13,7 @@ from os import path
 from pandas import DataFrame
 from numpy import array
 
-from . import bokeh_utils, coordinate_utils, color_utils, gmaps_utils
+from . import bokeh_utils, coordinate_utils, gmaps_utils
 
 
 class WorkflowOrderError(Exception):
@@ -93,7 +93,7 @@ class Theto(object):
         # removed 'x_coord_point', 'y_coord_point', 'raw_data'
         self.omit_columns = [
             'index', 'x_coords', 'y_coords', 'x_coords_transform', 'y_coords_transform',
-             'x_coord_point_transform', 'y_coord_point_transform'
+            'x_coord_point_transform', 'y_coord_point_transform'
         ]
 
         self.sources = dict()
@@ -624,6 +624,7 @@ class Theto(object):
         for k, v in new_fields.items():
             self.columndatasources[source_label].data[k] = v
 
+        hover_object = None
         if bokeh_model == bokeh_utils.MODELS['MultiPolygons']:
             if type(self.plot) == GMapPlot:
                 raise ValueError(
@@ -653,7 +654,9 @@ class Theto(object):
 
         if source_label in self.views:
             if len(hover_kwargs) > 0:
-                rend = self.plot.add_glyph(source, model_object, hover_glyph=hover_object, view=self.views[source_label])
+                rend = self.plot.add_glyph(
+                    source, model_object, hover_glyph=hover_object, view=self.views[source_label]
+                )
             else:
                 rend = self.plot.add_glyph(source, model_object, view=self.views[source_label])
         else:
@@ -696,7 +699,8 @@ class Theto(object):
                 url = 'https://maps.google.com/maps?q=@y_coord_point,@x_coord_point'
                 taptool.callback = OpenURL(url=url)
             elif click_for_map == 'bing':
-                url = 'https://bing.com/maps/default.aspx?sp=point.@{y_coord_point}_@{x_coord_point}_Selected point&style=r'
+                url = 'https://bing.com/maps/default.aspx?sp=point.'
+                url += '@{y_coord_point}_@{x_coord_point}_Selected point&style=r'
                 taptool.callback = OpenURL(url=url)
             else:
                 raise NotImplementedError('Value for `click_for_map` must be "bing", "google" or None.')
@@ -914,6 +918,7 @@ class Theto(object):
                 button = button['widget']
             else:
                 animate = False
+                button = None
 
             widget_list = [d['widget'] for d in self.widgets.values()]
 

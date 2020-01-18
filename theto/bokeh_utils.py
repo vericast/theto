@@ -25,7 +25,7 @@ def get_tile_source(name):
         'stame_watercolor': 'https://tile.stamen.com/watercolor/{Z}/{X}/{Y}.jpg',
         'stamen_toner': 'https://tile.stamen.com/toner/{Z}/{X}/{Y}.png',
         'stamen_toner_background': 'https://tile.stamen.com/toner-background/{Z}/{X}/{Y}.png',
-        'stamen_toner_labels':'https://tile.stamen.com/toner-labels/{Z}/{X}/{Y}.png',
+        'stamen_toner_labels': 'https://tile.stamen.com/toner-labels/{Z}/{X}/{Y}.png',
 
         # Esri maps (see https://server.arcgisonline.com/arcgis/rest/services for the full list)
         'esri_imagery': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg',
@@ -76,17 +76,17 @@ DEFAULT_KWARGS = {
         'start': 'auto',
         'end': 'auto',
         'step': 1,
-        'value':'auto',
+        'value': 'auto',
         'width': 50,
         'show_value': True,
         'orientation':
         'vertical',
         'tooltips': False,
-        'format':'0'
+        'format': '0'
     },
     'Dropdown': {
         'menu': 'auto',
-        'value':'auto',
+        'value': 'auto',
         'width': 100,
         'label': 'geohashes'
     },
@@ -94,12 +94,12 @@ DEFAULT_KWARGS = {
         'start': 'auto',
         'end': 'auto',
         'step': 1,
-        'value':'auto',
+        'value': 'auto',
         'width': 50,
         'show_value': True,
         'orientation': 'vertical',
         'tooltips': False,
-        'format':'0'
+        'format': '0'
     },
     'CheckboxButtonGroup': {
         'labels': 'auto',
