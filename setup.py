@@ -9,7 +9,7 @@ except:
 
 setup(
     name='theto',
-    version='0.1.0',
+    version='0.2.1',
     description='Workflow automation for exploring location data',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,7 +24,6 @@ setup(
         'pandas',
         'numpy',
         'shapely',
-        'pyproj',
-        'geohash2'
+        'pyproj'
     ],
 )

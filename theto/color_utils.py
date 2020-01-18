@@ -1,8 +1,6 @@
-from bokeh.palettes import colorblind
 from bokeh.colors import named
 from numpy import array, repeat, argmax, linspace
 
-COLORBLIND_PALETTE = colorblind['Colorblind'][8]
 NAMED_COLORS = {color: getattr(named, color).to_hex() for color in named.__all__}
 
 
@@ -188,7 +186,7 @@ def hls_palette(n_colors=6, h=.01, l=.6, s=.65):
 def assign_colors(color_arr, start=None, end=None, mid='#ffffff', trans=None, categorical_palette=None):
 
     if categorical_palette is None:
-        categorical_palette = COLORBLIND_PALETTE
+        categorical_palette = None
     
     # continuous palette
     if check_numeric(color_arr):
