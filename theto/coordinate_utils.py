@@ -252,21 +252,28 @@ def validate_latlon_pair(value):
     """
 
     if len(value) != 2:
-        raise ValueError('List inputs are assumed to be coordinate pairs. This list has more than two elements.')
+        raise ValueError(
+            ' '.join([
+                'List inputs are assumed to be coordinate pairs,',
+                'but this list has more than two elements:',
+                str(value)
+            ])
 
     if not (-180.0 <= value[0] <= 180.0):
         raise ValueError(
             ' '.join([
                 'The first element of the list is assumed to be longitude (x-coordinates),',
-                'but this element is outside acceptable bounds (-180.0, 180.0)'
+                'but this element is outside acceptable bounds (-180.0, 180.0):',
+                str(value[0])
             ])
         )
 
-    if not (-90.0 <= value[0] <= 90.0):
+    if not (-90.0 <= value[1] <= 90.0):
         raise ValueError(
             ' '.join([
                 'The second element of the list is assumed to be latitude (y-coordinates),',
-                'but this element is outside acceptable bounds (-90.0, 90.0)'
+                'but this element is outside acceptable bounds (-90.0, 90.0):',
+                str(value[1])
             ])
         )
 
